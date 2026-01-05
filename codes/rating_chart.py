@@ -6,10 +6,10 @@ import sys
 import asciichartpy as ac
 import requests
 
-USERNAME = 'sciencepal'
-TIME_CLASS = 'blitz'
-RULES = 'chess' #chess960 and other variants possible here
-NGAMES = 100
+USERNAME = 'Wawa_wuwa'    # Your chess.com username...
+TIME_CLASS = 'rapid'      # 'blitz'/'rapid'/'bullet'
+RULES = 'chess'           # chess960 and other variants possible here
+NGAMES = 100              # No. of recent games you want to display...
 headers = {"User-Agent": "ChessRatingRefresh/1.0 aditya.pal.science@gmail.com"}
 ARCHIVES_URL = 'https://api.chess.com/pub/player/{user}/games/archives'
 
