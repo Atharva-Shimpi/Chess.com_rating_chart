@@ -32,20 +32,23 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Generate ASCII chart
-        run: |
-          python codes/rating_chart.py > chart.txt
+      - name: Generate SVG charts
+        run: python codes/svg_charts.py
+
 
       # 🔥 README is now built directly (no assets/)
       - name: Update README.md
         run: |
-          echo "<h1>♟️ Chess.com Rating Chart</h1>" > README.md
-          echo "<pre><code>" >> README.md
-          cat chart.txt >> README.md
+          echo "# ♟️ Chess.com Rating Charts" > README.md
+          echo "## Blitz" >> README.md
+          echo '<img src="rating-blitz.svg" />' >> README.md
           echo "" >> README.md
-          currentDate=$(env TZ=Asia/Kolkata date)
-          echo "Chart last updated - ${currentDate}" >> README.md
-          echo "</code></pre>" >> README.md
+          echo "## Rapid" >> README.md
+          echo '<img src="rating-rapid.svg" />' >> README.md
+          echo "" >> README.md
+          echo "## Bullet" >> README.md
+          echo '<img src="rating-bullet.svg" />' >> README.md
+
 
       # 🔁 Keep random cron logic (unchanged)
       - name: Generate next random cron workflow
