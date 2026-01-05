@@ -6,9 +6,9 @@ RULES = "chess"
 NGAMES = 100
 
 TIME_CLASSES = {
-    "blitz": "#E74C3C",
-    "rapid": "#3498DB",
-    "bullet": "#2ECC71",
+    "blitz": {"up": "#22c55e", "down": "#ef4444"},
+    "rapid": {"up": "#3b82f6", "down": "#ef4444"},
+    "bullet": {"up": "#f59e0b", "down": "#ef4444"},
 }
 
 ARCHIVES_URL = "https://api.chess.com/pub/player/{user}/games/archives"
@@ -64,17 +64,18 @@ def plot_colored_segments(data, up_color, down_color):
         )
 
 
-for time_class, color in TIME_CLASSES.items():
+for time_class, colors in TIME_CLASSES.items():
     ratings = get_ratings(time_class)
     if not ratings:
         continue
 
     plt.figure(figsize=(10, 4))
     plot_colored_segments(
-    ratings,
-    up_color=color,
-    down_color="#7F8C8D"  # grey for rating drops
-)
+        ratings,
+        up_color=colors["up"],
+        down_color=colors["down"]
+    )
+
 
     plt.title(f"{time_class.capitalize()} Rating ({NGAMES} games)")
     plt.xlabel("Games")
