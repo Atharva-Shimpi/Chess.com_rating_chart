@@ -1,4 +1,4 @@
-# Chess.com Rating Chart
+<h1>♟️ Chess.com Rating Chart</h1>
 <pre><code>
 Rapid Rating (100 games)
 
@@ -19,5 +19,6 @@ Rapid Rating (100 games)
   195.00  ┤ │
   158.50  ┼╮│
   122.00  ┤╰╯
+
+Chart last updated - Tue Jan  6 03:03:16 IST 2026
 </code></pre>
-Chart last updated - Tue Jan  6 02:58:54 IST 2026
