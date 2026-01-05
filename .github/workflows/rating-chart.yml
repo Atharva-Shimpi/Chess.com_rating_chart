@@ -41,9 +41,11 @@ jobs:
         run: |
           echo "# Chess.com Rating Chart" > README.md
           echo "" >> README.md
+          echo '```text' >> README.md
           cat chart.txt >> README.md
+          echo '```' >> README.md
           echo "" >> README.md
-          currentDate=$(env TZ=America/New_York date)
+          currentDate=$(env TZ=Asia/Kolkata date)
           echo "Chart last updated - ${currentDate}" >> README.md
 
       # 🔁 Keep random cron logic (unchanged)
@@ -57,16 +59,20 @@ jobs:
 
       - name: Check for changes
         id: changed
-        run: git diff --exit-code
-        continue-on-error: true
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
 
       - name: Commit changes
-        if: steps.changed.outcome == 'failure'
+        if: steps.changed.outcome == 'true'
         uses: EndBug/add-and-commit@v4
         with:
           author_name: Atharva Shimpi
           author_email: atharvashimpi2005@gmail.com
-          message: "Auto updating README and rating-chat-workflow timing"
+          message: "Auto updating README and workflow timing"
           add: "README.md .github/workflows/rating-chart.yml"
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN_1 }}
