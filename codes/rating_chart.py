@@ -61,4 +61,5 @@ def main():
 if __name__ == "__main__":
 
     plot = main()
+    print(f"{TIME_CLASS.capitalize()} Rating ({NGAMES} games)\n")
     print (plot)
