@@ -1,3 +1,4 @@
+```
 # Chess.com Rating Chart
 
   698.00  ┤
