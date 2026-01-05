@@ -1,4 +1,3 @@
-```
 # Chess.com Rating Chart
 
   698.00  ┤
@@ -19,4 +18,4 @@
   158.00  ┼╮│
   122.00  ┤╰╯
 
-Chart last updated - Mon Jan  5 14:02:09 EST 2026
+Chart last updated - Mon Jan  5 14:43:31 EST 2026
