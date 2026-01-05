@@ -1,24 +1,9 @@
-<h1>♟️ Chess.com Rating Chart</h1>
-<pre><code>
-Rapid Rating (100 games)
+# ♟️ Chess.com Rating Charts
+## Blitz
+<img src="rating-blitz.svg" />
 
-  706.00  ┤
-  669.50  ┤                                                   ╭─────
-  633.00  ┤                                          ╭────────╯
-  596.50  ┤                               ╭─────╮╭───╯
-  560.00  ┤                             ╭─╯     ╰╯
-  523.50  ┤                     ╭╮╭╮╭╮╭─╯
-  487.00  ┤                    ╭╯╰╯╰╯╰╯
-  450.50  ┤                   ╭╯
-  414.00  ┤                  ╭╯
-  377.50  ┤ ╭─╮             ╭╯
-  341.00  ┤ │ │             │
-  304.50  ┤ │ ╰╮     ╭╮ ╭╮ ╭╯
-  268.00  ┤ │  │╭╮ ╭─╯╰─╯╰╮│
-  231.50  ┤ │  ╰╯╰─╯      ╰╯
-  195.00  ┤ │
-  158.50  ┼╮│
-  122.00  ┤╰╯
+## Rapid
+<img src="rating-rapid.svg" />
 
-Chart last updated - Tue Jan  6 03:03:16 IST 2026
-</code></pre>
+## Bullet
+<img src="rating-bullet.svg" />
