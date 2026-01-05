@@ -39,12 +39,13 @@ jobs:
       # 🔥 README is now built directly (no assets/)
       - name: Update README.md
         run: |
-          echo "# Chess.com Rating Chart" > README.md
+          echo "<h1>♟️ Chess.com Rating Chart</h1>" > README.md
           echo "<pre><code>" >> README.md
           cat chart.txt >> README.md
-          echo "</code></pre>" >> README.md
+          echo "" >> README.md
           currentDate=$(env TZ=Asia/Kolkata date)
           echo "Chart last updated - ${currentDate}" >> README.md
+          echo "</code></pre>" >> README.md
 
       # 🔁 Keep random cron logic (unchanged)
       - name: Generate next random cron workflow
