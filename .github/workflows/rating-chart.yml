@@ -11,6 +11,7 @@ on:
       - .github/workflows/rating-chart.yml
   schedule:
     - cron: "0 */7 * * *"
+  workflow_dispatch:    # Allows manual run from github UI...
 jobs:
   ratings-chart:
     runs-on: ubuntu-latest
