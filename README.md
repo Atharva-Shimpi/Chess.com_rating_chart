@@ -1,9 +1,9 @@
 # ♟️ Chess.com Rating Charts
 ## Blitz
-<img src="assets/svg/rating-blitz.svg" />
+<img src="rating-blitz.svg" />
 
 ## Rapid
-<img src="assets/svg/rating-rapid.svg" />
+<img src="rating-rapid.svg" />
 
 ## Bullet
-<img src="assets/svg/rating-bullet.svg" />
+<img src="rating-bullet.svg" />
