@@ -52,13 +52,6 @@ jobs:
           EOF
 
 
-      - name: Generate next random cron workflow
-        run: |
-          python codes/generate_random_workflow.py > rating-yaml.txt
-
-      - name: Replace workflow file
-        run: |
-          cat rating-yaml.txt > .github/workflows/rating-chart.yml
 
       - name: Check for changes
         id: changed
