@@ -1,0 +1,14 @@
+# Ignore Python junk
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore virtual envs
+venv/
+.env/
+
+# Allow SVG charts explicitly
+!assets/
+!assets/svg/
+!assets/svg/*.svg
