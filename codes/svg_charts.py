@@ -1,5 +1,8 @@
 import requests
 
+import os
+os.makedirs("assets/svg", exist_ok=True)
+
 import matplotlib
 matplotlib.use("Agg")
 
