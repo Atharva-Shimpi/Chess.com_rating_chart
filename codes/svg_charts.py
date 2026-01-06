@@ -15,9 +15,9 @@ HEADERS = {
     "User-Agent": "ChessRatingRefresh/1.0 atharvashimpi2005@gmail.com"
 }
 
-USERNAME = "Atharva-Shimpi"
+USERNAME = "Wawa_wuwa"        # Your Username here...
 RULES = "chess"
-NGAMES = 100
+NGAMES = 100                  # No. of recent games you want to display...
 
 TIME_CLASSES = {
     "blitz": {"up": "#22c55e", "down": "#ef4444"},
