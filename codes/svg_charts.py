@@ -2,35 +2,39 @@ import requests
 import math
 import matplotlib
 matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 
-# =========================
-# CONFIG
-# =========================
+# -------------------- CONFIG --------------------
 
 USERNAME = "Atharva-Shimpi"
 RULES = "chess"
-NGAMES = {
-    "blitz": 100,
-    "rapid": 60,
-    "bullet": 50
+
+TIME_CLASSES = {
+    "blitz": {
+        "games": 100,
+        "color": "#4A3A2A",   # Umber
+        "label": "BLITZ · LAST 100 GAMES",
+    },
+    "rapid": {
+        "games": 60,
+        "color": "#3F5F3A",   # Moss Green
+        "label": "RAPID · LAST 60 GAMES",
+    },
+    "bullet": {
+        "games": 50,
+        "color": "#1F2F45",   # Midnight Blue
+        "label": "BULLET · LAST 50 GAMES",
+    },
 }
 
-# Color system (locked)
-COLORS = {
-    "background": "#F7F4EC",   # Ivory
-    "text": "#2A2529",         # Charcoal
-    "blitz": "#4A3B2A",        # Umber
-    "rapid": "#4F6F52",        # Moss Green
-    "bullet": "#24344D"        # Midnight Blue
-}
+IVORY = "#F6F3EB"
+TEXT = "#2A2529"
 
 ARCHIVES_URL = "https://api.chess.com/pub/player/{user}/games/archives"
 
-# =========================
-# DATA
-# =========================
+# -------------------- DATA --------------------
 
 def get_archives():
     r = requests.get(ARCHIVES_URL.format(user=USERNAME))
@@ -38,8 +42,7 @@ def get_archives():
         return []
     return r.json().get("archives", [])[::-1]
 
-
-def get_ratings(time_class):
+def get_ratings(time_class, limit):
     games = []
     for archive in get_archives():
         r = requests.get(archive)
@@ -50,107 +53,80 @@ def get_ratings(time_class):
         filtered = [
             g for g in data
             if g.get("time_class") == time_class and g.get("rules") == RULES
-        ][::-1]
-
+        ]
         games.extend(filtered)
-        if len(games) >= NGAMES[time_class]:
+        if len(games) >= limit:
             break
 
     ratings = []
-    for g in games[:NGAMES[time_class]]:
+    for g in games[:limit]:
         side = "white" if g["white"]["username"].lower() == USERNAME.lower() else "black"
         ratings.append(g[side]["rating"])
 
-    return ratings
+    # oldest → newest (correct direction)
+    return ratings[::-1]
 
+# -------------------- PLOT --------------------
 
-# =========================
-# DRAWING
-# =========================
+def dotted_fill_plot(ax, ratings, color):
+    x = list(range(len(ratings)))
 
-def draw_dotted_column_chart(ax, ratings, color):
-    baseline = min(ratings) - 25  # negative space above x-axis
-    step = 12                     # vertical dot spacing
+    # baseline slightly ABOVE x-axis (negative spacing illusion)
+    baseline = min(ratings) - 20
 
-    for x, rating in enumerate(ratings):
-        dots = int((rating - baseline) / step)
-        for i in range(dots):
-            ax.scatter(
-                x,
-                baseline + i * step,
-                s=14,
-                color=color,
-                linewidths=0,
-                alpha=0.95
-            )
+    for i, r in enumerate(ratings):
+        y_values = list(range(baseline, r, 10))
+        x_values = [i] * len(y_values)
+        ax.scatter(
+            x_values,
+            y_values,
+            s=14,
+            color=color,
+            alpha=0.9,
+            linewidths=0
+        )
 
+def style_axes(ax, label):
+    ax.set_facecolor(IVORY)
 
-def style_axes(ax, title):
-    ax.set_facecolor(COLORS["background"])
+    # Remove box
+    for spine in ["top", "right", "left"]:
+        ax.spines[spine].set_visible(False)
 
-    # Only bottom axis visible
-    for side in ["top", "left", "right"]:
-        ax.spines[side].set_visible(False)
+    # X-axis only
+    ax.spines["bottom"].set_color(TEXT)
+    ax.spines["bottom"].set_linewidth(1.2)
 
-    ax.spines["bottom"].set_color(COLORS["text"])
-    ax.spines["bottom"].set_linewidth(1.1)
+    # Ticks
+    ax.tick_params(axis="x", colors=TEXT, labelsize=9, pad=10)
+    ax.tick_params(axis="y", colors=TEXT, labelsize=9, length=0, pad=8)
 
-    # Y-axis minimal
+    # Reduce Y ticks
     ax.yaxis.set_major_locator(MaxNLocator(5))
-    ax.tick_params(axis="y", colors=COLORS["text"], labelsize=9, length=0)
 
-    # X-axis spacing + ticks
-    ax.tick_params(axis="x", colors=COLORS["text"], labelsize=9, pad=12)
+    # Labels styling
+    for t in ax.get_yticklabels():
+        t.set_fontweight("bold")
+        t.set_fontfamily("DejaVu Sans")
 
-    # Title
+    for t in ax.get_xticklabels():
+        t.set_fontweight("bold")
+        t.set_fontfamily("DejaVu Sans")
+
     ax.set_title(
-        title.upper(),
+        label,
         loc="left",
         fontsize=12,
         fontweight="bold",
-        color=COLORS["text"],
-        pad=16
+        color=TEXT,
+        pad=18
     )
 
-    # Footer label
-    ax.set_xlabel(
-        "GAMES (MOST RECENT →)",
-        fontsize=9,
-        fontweight="bold",
-        color=COLORS["text"],
-        labelpad=18
-    )
+# -------------------- MAIN --------------------
 
-
-# =========================
-# MAIN
-# =========================
-
-for mode in ["blitz", "rapid", "bullet"]:
-    ratings = get_ratings(mode)
+for time_class, cfg in TIME_CLASSES.items():
+    ratings = get_ratings(time_class, cfg["games"])
     if not ratings:
         continue
 
-    fig, ax = plt.subplots(figsize=(10.8, 4.4))
-    fig.patch.set_facecolor(COLORS["background"])
-
-    draw_dotted_column_chart(ax, ratings, COLORS[mode])
-    style_axes(ax, f"{mode} · last {len(ratings)} games")
-
-    # Negative spacing (floating look)
-    ax.set_xlim(-3, len(ratings) + 2)
-    ax.set_ylim(min(ratings) - 40, max(ratings) + 40)
-
-    plt.subplots_adjust(
-        left=0.06,
-        right=0.985,
-        top=0.82,
-        bottom=0.24
-    )
-
-    plt.savefig(
-        f"assets/svg/rating-{mode}.svg",
-        format="svg",
-        bbox_inches="tight"
-    )
-    plt.close()
+    fig = plt.figure(figsize=(11, 4.6)
