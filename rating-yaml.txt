@@ -1,0 +1,81 @@
+# please create a new token github.com/settings/tokens/new .
+# give repo read write and workflow permissions to the token and store its value
+# add the token as a repo secret with key GH_TOKEN_1 and value equal to token value stored above
+
+name: Update Readme ascii graph and workflow with random cron interval
+
+on:
+  push:
+    branches: master
+    paths-ignore:
+      - README.md
+      - .github/workflows/rating-chart.yml
+  schedule:
+    - cron: "0 */1 * * *"
+  workflow_dispatch:
+
+jobs:
+  ratings-chart:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN_1 }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.8"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate SVG charts
+        run: python codes/svg_charts.py
+
+
+      - name: Update README.md
+        run: |
+          cat << 'EOF' > README.md
+          # ♟ Chess.com Rating Charts
+
+          ## Blitz
+          <img src="assets/svg/rating-blitz.svg" />
+
+          ## Rapid
+          <img src="assets/svg/rating-rapid.svg" />
+
+          ## Bullet
+          <img src="assets/svg/rating-bullet.svg" />
+          EOF
+
+
+      - name: Generate next random cron workflow
+        run: |
+          python codes/generate_random_workflow.py > rating-yaml.txt
+
+      - name: Replace workflow file
+        run: |
+          cat rating-yaml.txt > .github/workflows/rating-chart.yml
+
+      - name: Check for changes
+        id: changed
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit changes
+        if: steps.changed.outputs.changed == 'true'
+        uses: EndBug/add-and-commit@v4
+        with:
+          author_name: Atharva Shimpi
+          author_email: atharvashimpi2005@gmail.com
+          message: "Auto updating README and workflow timing"
+          add: "."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN_1 }}
