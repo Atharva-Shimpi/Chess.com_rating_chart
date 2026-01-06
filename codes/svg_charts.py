@@ -89,5 +89,9 @@ for time_class, colors in TIME_CLASSES.items():
     plt.ylabel("Rating")
     plt.grid(alpha=0.3)
     plt.tight_layout()
-    plt.savefig(f"assets/svg/rating-{time_class}.svg", format="svg")
+    plt.savefig(
+        f"assets/svg/rating-{time_class}.svg",
+        format="svg",
+        bbox_inches="tight"
+    )
     plt.close()
