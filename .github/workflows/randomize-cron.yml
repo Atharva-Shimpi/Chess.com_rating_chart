@@ -1,0 +1,27 @@
+name: Randomize cron for rating chart
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"
+
+jobs:
+  randomize:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN_1 }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: python codes/generate_random_workflow.py
+
+      - uses: EndBug/add-and-commit@v4
+        with:
+          message: "Randomize rating chart cron"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN_1 }}
