@@ -4,6 +4,7 @@ matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
+from datetime import datetime
 
 # ================= CONFIG =================
 
@@ -11,21 +12,9 @@ USERNAME = "Atharva-Shimpi"
 RULES = "chess"
 
 TIME_CLASSES = {
-    "blitz": {
-        "games": 100,
-        "color": "#4A3A2A",   # Umber
-        "label": "BLITZ · LAST 100 GAMES",
-    },
-    "rapid": {
-        "games": 60,
-        "color": "#3F5F3A",   # Moss Green
-        "label": "RAPID · LAST 60 GAMES",
-    },
-    "bullet": {
-        "games": 50,
-        "color": "#1F2F45",   # Midnight Blue
-        "label": "BULLET · LAST 50 GAMES",
-    },
+    "blitz": {"games": 100, "color": "#4A3A2A", "label": "BLITZ · LAST 100 GAMES"},
+    "rapid": {"games": 60, "color": "#3F5F3A", "label": "RAPID · LAST 60 GAMES"},
+    "bullet": {"games": 50, "color": "#1F2F45", "label": "BULLET · LAST 50 GAMES"},
 }
 
 IVORY = "#F6F3EB"
@@ -63,61 +52,48 @@ def get_ratings(time_class, limit):
         side = "white" if g["white"]["username"].lower() == USERNAME.lower() else "black"
         ratings.append(g[side]["rating"])
 
-    # oldest → newest
-    return ratings[::-1]
+    return ratings[::-1]  # oldest → newest
 
 
-# ================= PLOT =================
+# ================= VISUAL =================
 
 def dotted_fill(ax, ratings, color):
-    x_vals = range(len(ratings))
-
-    baseline = min(ratings) - 25  # floating gap above x-axis
-
-    for x, rating in zip(x_vals, ratings):
+    baseline = min(ratings) - 25
+    for x, rating in enumerate(ratings):
         y_stack = range(baseline, rating, 10)
         ax.scatter(
             [x] * len(y_stack),
             y_stack,
             s=14,
             color=color,
+            linewidths=0,
             alpha=0.9,
-            linewidths=0
         )
 
 
 def style_axes(ax, title):
     ax.set_facecolor(IVORY)
 
-    # Remove all spines except bottom
     for spine in ["top", "right", "left"]:
         ax.spines[spine].set_visible(False)
 
     ax.spines["bottom"].set_color(TEXT)
     ax.spines["bottom"].set_linewidth(1.2)
 
-    # Ticks
     ax.tick_params(axis="x", colors=TEXT, labelsize=9, pad=10)
     ax.tick_params(axis="y", colors=TEXT, labelsize=9, length=0, pad=8)
 
     ax.yaxis.set_major_locator(MaxNLocator(5))
 
-    # Typography
     for label in ax.get_xticklabels() + ax.get_yticklabels():
         label.set_fontweight("bold")
-        label.set_fontfamily("DejaVu Sans")
 
-    ax.set_title(
-        title,
-        loc="left",
-        fontsize=12,
-        fontweight="bold",
-        color=TEXT,
-        pad=18
-    )
+    ax.set_title(title, loc="left", fontsize=12, fontweight="bold", color=TEXT, pad=18)
 
 
 # ================= MAIN =================
+
+timestamp = datetime.utcnow().isoformat()
 
 for mode, cfg in TIME_CLASSES.items():
     ratings = get_ratings(mode, cfg["games"])
@@ -125,8 +101,6 @@ for mode, cfg in TIME_CLASSES.items():
         continue
 
     fig = plt.figure(figsize=(11, 4.6), facecolor=IVORY)
-
-    # Negative spacing / floating chart
     ax = fig.add_axes([0.08, 0.22, 0.86, 0.62])
 
     dotted_fill(ax, ratings, cfg["color"])
@@ -135,21 +109,18 @@ for mode, cfg in TIME_CLASSES.items():
     ax.set_xlim(-2, len(ratings) + 1)
     ax.set_ylim(min(ratings) - 35, max(ratings) + 30)
 
-    # Footer micro text
+    # Invisible commit marker (SVG comment)
     fig.text(
-        0.5,
-        0.08,
-        "CHESS.COM RATING HISTORY",
-        ha="center",
-        va="center",
-        fontsize=9,
-        fontweight="bold",
-        color=TEXT
+        0.001,
+        0.001,
+        f"<!-- GENERATED {timestamp} -->",
+        fontsize=1,
+        color=IVORY,
     )
 
     plt.savefig(
         f"assets/svg/rating-{mode}.svg",
         format="svg",
-        facecolor=IVORY
+        facecolor=IVORY,
     )
     plt.close()
