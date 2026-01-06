@@ -1,5 +1,8 @@
 import requests
+import matplotlib
 import matplotlib.pyplot as plt
+
+matplotlib.rcParams["svg.image_inline"] = False
 
 USERNAME = "Atharva-Shimpi"
 RULES = "chess"
