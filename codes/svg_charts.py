@@ -66,7 +66,7 @@ def get_ratings(time_class):
         )
         ratings.append(g[side]["rating"])
 
-    return ratings
+    return ratings[::-1]        # OLDEST --> NEWEST
 
 
 def plot_colored_segments(data, up_color, down_color):
