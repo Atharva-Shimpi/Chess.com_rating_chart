@@ -58,7 +58,7 @@ def get_ratings(time_class, limit):
 # ================= VISUAL =================
 
 def dotted_fill(ax, ratings, color):
-    baseline = min(ratings) - 25
+    baseline = min(ratings) - 30
     for x, rating in enumerate(ratings):
         y_stack = range(baseline, rating, 10)
         ax.scatter(
@@ -88,34 +88,47 @@ def style_axes(ax, title):
     for label in ax.get_xticklabels() + ax.get_yticklabels():
         label.set_fontweight("bold")
 
-    ax.set_title(title, loc="left", fontsize=12, fontweight="bold", color=TEXT, pad=18)
+    ax.set_title(
+        title,
+        loc="left",
+        fontsize=12,
+        fontweight="bold",
+        color=TEXT,
+        pad=18,
+    )
 
 
 # ================= MAIN =================
 
-timestamp = datetime.utcnow().isoformat()
+timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
 
 for mode, cfg in TIME_CLASSES.items():
     ratings = get_ratings(mode, cfg["games"])
     if not ratings:
         continue
 
-    fig = plt.figure(figsize=(11, 4.6), facecolor=IVORY)
-    ax = fig.add_axes([0.08, 0.22, 0.86, 0.62])
+    fig = plt.figure(figsize=(11, 4.8), facecolor=IVORY)
+
+    # Main chart area (intentional negative space)
+    ax = fig.add_axes([0.08, 0.26, 0.86, 0.60])
 
     dotted_fill(ax, ratings, cfg["color"])
     style_axes(ax, cfg["label"])
 
     ax.set_xlim(-2, len(ratings) + 1)
-    ax.set_ylim(min(ratings) - 35, max(ratings) + 30)
+    ax.set_ylim(min(ratings) - 40, max(ratings) + 35)
 
-    # Invisible commit marker (SVG comment)
+    # Footer timestamp — GUARANTEED DIFF
     fig.text(
-        0.001,
-        0.001,
-        f"<!-- GENERATED {timestamp} -->",
-        fontsize=1,
-        color=IVORY,
+        0.5,
+        0.12,
+        f"UPDATED · {timestamp}",
+        ha="center",
+        va="center",
+        fontsize=8,
+        fontweight="bold",
+        color=TEXT,
+        alpha=0.6,
     )
 
     plt.savefig(
