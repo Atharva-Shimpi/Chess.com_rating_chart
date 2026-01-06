@@ -75,6 +75,6 @@ jobs:
           author_name: Atharva Shimpi
           author_email: atharvashimpi2005@gmail.com
           message: "Auto updating README and workflow timing"
-          add: "README.md *.svg .github/workflows/rating-chart.yml"
+          add: "README.md .github/workflows/rating-chart.yml *.svg"
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN_1 }}
