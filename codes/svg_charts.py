@@ -1,12 +1,11 @@
 import requests
-import math
 import matplotlib
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 
-# -------------------- CONFIG --------------------
+# ================= CONFIG =================
 
 USERNAME = "Atharva-Shimpi"
 RULES = "chess"
@@ -34,13 +33,14 @@ TEXT = "#2A2529"
 
 ARCHIVES_URL = "https://api.chess.com/pub/player/{user}/games/archives"
 
-# -------------------- DATA --------------------
+# ================= DATA =================
 
 def get_archives():
     r = requests.get(ARCHIVES_URL.format(user=USERNAME))
     if r.status_code != 200:
         return []
     return r.json().get("archives", [])[::-1]
+
 
 def get_ratings(time_class, limit):
     games = []
@@ -63,37 +63,36 @@ def get_ratings(time_class, limit):
         side = "white" if g["white"]["username"].lower() == USERNAME.lower() else "black"
         ratings.append(g[side]["rating"])
 
-    # oldest → newest (correct direction)
+    # oldest → newest
     return ratings[::-1]
 
-# -------------------- PLOT --------------------
 
-def dotted_fill_plot(ax, ratings, color):
-    x = list(range(len(ratings)))
+# ================= PLOT =================
 
-    # baseline slightly ABOVE x-axis (negative spacing illusion)
-    baseline = min(ratings) - 20
+def dotted_fill(ax, ratings, color):
+    x_vals = range(len(ratings))
 
-    for i, r in enumerate(ratings):
-        y_values = list(range(baseline, r, 10))
-        x_values = [i] * len(y_values)
+    baseline = min(ratings) - 25  # floating gap above x-axis
+
+    for x, rating in zip(x_vals, ratings):
+        y_stack = range(baseline, rating, 10)
         ax.scatter(
-            x_values,
-            y_values,
+            [x] * len(y_stack),
+            y_stack,
             s=14,
             color=color,
             alpha=0.9,
             linewidths=0
         )
 
-def style_axes(ax, label):
+
+def style_axes(ax, title):
     ax.set_facecolor(IVORY)
 
-    # Remove box
+    # Remove all spines except bottom
     for spine in ["top", "right", "left"]:
         ax.spines[spine].set_visible(False)
 
-    # X-axis only
     ax.spines["bottom"].set_color(TEXT)
     ax.spines["bottom"].set_linewidth(1.2)
 
@@ -101,20 +100,15 @@ def style_axes(ax, label):
     ax.tick_params(axis="x", colors=TEXT, labelsize=9, pad=10)
     ax.tick_params(axis="y", colors=TEXT, labelsize=9, length=0, pad=8)
 
-    # Reduce Y ticks
     ax.yaxis.set_major_locator(MaxNLocator(5))
 
-    # Labels styling
-    for t in ax.get_yticklabels():
-        t.set_fontweight("bold")
-        t.set_fontfamily("DejaVu Sans")
-
-    for t in ax.get_xticklabels():
-        t.set_fontweight("bold")
-        t.set_fontfamily("DejaVu Sans")
+    # Typography
+    for label in ax.get_xticklabels() + ax.get_yticklabels():
+        label.set_fontweight("bold")
+        label.set_fontfamily("DejaVu Sans")
 
     ax.set_title(
-        label,
+        title,
         loc="left",
         fontsize=12,
         fontweight="bold",
@@ -122,11 +116,40 @@ def style_axes(ax, label):
         pad=18
     )
 
-# -------------------- MAIN --------------------
 
-for time_class, cfg in TIME_CLASSES.items():
-    ratings = get_ratings(time_class, cfg["games"])
+# ================= MAIN =================
+
+for mode, cfg in TIME_CLASSES.items():
+    ratings = get_ratings(mode, cfg["games"])
     if not ratings:
         continue
 
-    fig = plt.figure(figsize=(11, 4.6)
+    fig = plt.figure(figsize=(11, 4.6), facecolor=IVORY)
+
+    # Negative spacing / floating chart
+    ax = fig.add_axes([0.08, 0.22, 0.86, 0.62])
+
+    dotted_fill(ax, ratings, cfg["color"])
+    style_axes(ax, cfg["label"])
+
+    ax.set_xlim(-2, len(ratings) + 1)
+    ax.set_ylim(min(ratings) - 35, max(ratings) + 30)
+
+    # Footer micro text
+    fig.text(
+        0.5,
+        0.08,
+        "CHESS.COM RATING HISTORY",
+        ha="center",
+        va="center",
+        fontsize=9,
+        fontweight="bold",
+        color=TEXT
+    )
+
+    plt.savefig(
+        f"assets/svg/rating-{mode}.svg",
+        format="svg",
+        facecolor=IVORY
+    )
+    plt.close()
