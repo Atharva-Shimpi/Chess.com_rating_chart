@@ -2,7 +2,8 @@ import requests
 import matplotlib
 import matplotlib.pyplot as plt
 
-matplotlib.rcParams["svg.image_inline"] = False
+matplotlib.rcParams["svg.image_inline"] = False        # Prevents embedded PNGs
+matplotlib.rcParams["svg.fonttype"] = "path"           # Converts text --> vector paths (no embedded fonts)
 
 USERNAME = "Atharva-Shimpi"
 RULES = "chess"
