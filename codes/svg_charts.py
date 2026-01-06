@@ -11,6 +11,10 @@ import matplotlib.pyplot as plt
 matplotlib.rcParams["svg.image_inline"] = False        # Prevents embedded PNGs
 matplotlib.rcParams["svg.fonttype"] = "path"           # Converts text --> vector paths (no embedded fonts)
 
+HEADERS = {
+    "User-Agent": "ChessRatingRefresh/1.0 atharvashimpi2005@gmail.com"
+}
+
 USERNAME = "Atharva-Shimpi"
 RULES = "chess"
 NGAMES = 100
@@ -24,18 +28,20 @@ TIME_CLASSES = {
 ARCHIVES_URL = "https://api.chess.com/pub/player/{user}/games/archives"
 
 def get_archives():
-    resp = requests.get(ARCHIVES_URL.format(user=USERNAME))
+    resp = requests.get(
+        ARCHIVES_URL.format(user=USERNAME),
+        headers=HEADERS
+    )
     if resp.status_code != 200:
         return []
-    data = resp.json()
-    return data.get("archives", [])[::-1]
+    return resp.json().get("archives", [])[::-1]
 
 
 def get_ratings(time_class):
     games = []
 
     for archive in get_archives():
-        resp = requests.get(archive)
+        resp = requests.get(archive, headers=HEADERS)
         if resp.status_code != 200:
             continue
 
@@ -77,7 +83,14 @@ def plot_colored_segments(data, up_color, down_color):
 for time_class, colors in TIME_CLASSES.items():
     ratings = get_ratings(time_class)
     if not ratings:
+        plt.figure(figsize=(10, 4))
+        plt.text(0.5, 0.5, "No data available",
+                 ha="center", va="center", fontsize=14)
+        plt.axis("off")
+        plt.savefig(f"assets/svg/rating-{time_class}.svg", format="svg")
+        plt.close()
         continue
+
 
     plt.figure(figsize=(10, 4))
     plot_colored_segments(
