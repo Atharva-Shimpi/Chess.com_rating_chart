@@ -5,6 +5,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from datetime import datetime
+import hashlib
 
 # ================= CONFIG =================
 
@@ -12,9 +13,9 @@ USERNAME = "Wawa_wuwa"
 RULES = "chess"
 
 TIME_CLASSES = {
-    "blitz": {"games": 100, "color": "#4A3A2A", "label": "BLITZ · LAST 100 GAMES"},
-    "rapid": {"games": 60, "color": "#3F5F3A", "label": "RAPID · LAST 60 GAMES"},
-    "bullet": {"games": 50, "color": "#1F2F45", "label": "BULLET · LAST 50 GAMES"},
+    "blitz":  {"games": 100, "color": "#4A3A2A", "label": "BLITZ · LAST 100 GAMES"},
+    "rapid":  {"games": 60,  "color": "#3F5F3A", "label": "RAPID · LAST 60 GAMES"},
+    "bullet": {"games": 50,  "color": "#1F2F45", "label": "BULLET · LAST 50 GAMES"},
 }
 
 IVORY = "#F6F3EB"
@@ -58,7 +59,7 @@ def get_ratings(time_class, limit):
 # ================= VISUAL =================
 
 def dotted_fill(ax, ratings, color):
-    baseline = min(ratings) - 30
+    baseline = min(ratings) - 40
     for x, rating in enumerate(ratings):
         y_stack = range(baseline, rating, 10)
         ax.scatter(
@@ -100,16 +101,18 @@ def style_axes(ax, title):
 
 # ================= MAIN =================
 
-timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+now = datetime.utcnow().isoformat()
 
 for mode, cfg in TIME_CLASSES.items():
     ratings = get_ratings(mode, cfg["games"])
     if not ratings:
         continue
 
-    fig = plt.figure(figsize=(11, 4.8), facecolor=IVORY)
+    # 🔒 Generate deterministic run hash (FOR GIT DIFF)
+    hash_source = f"{now}-{ratings[-1]}-{mode}"
+    run_hash = hashlib.sha1(hash_source.encode()).hexdigest()[:10]
 
-    # Main chart area (intentional negative space)
+    fig = plt.figure(figsize=(11, 4.8), facecolor=IVORY)
     ax = fig.add_axes([0.08, 0.26, 0.86, 0.60])
 
     dotted_fill(ax, ratings, cfg["color"])
@@ -118,11 +121,11 @@ for mode, cfg in TIME_CLASSES.items():
     ax.set_xlim(-2, len(ratings) + 1)
     ax.set_ylim(min(ratings) - 40, max(ratings) + 35)
 
-    # Footer timestamp — GUARANTEED DIFF
+    # Footer (visible, styled)
     fig.text(
         0.5,
         0.12,
-        f"UPDATED · {timestamp}",
+        f"UPDATED · {now[:16].replace('T',' ')} UTC",
         ha="center",
         va="center",
         fontsize=8,
@@ -131,9 +134,12 @@ for mode, cfg in TIME_CLASSES.items():
         alpha=0.6,
     )
 
-    plt.savefig(
-        f"assets/svg/rating-{mode}.svg",
-        format="svg",
-        facecolor=IVORY,
-    )
+    output = f"assets/svg/rating-{mode}.svg"
+    plt.savefig(output, format="svg", facecolor=IVORY)
     plt.close()
+
+    # 🔒 Inject invisible metadata comment (GUARANTEED DIFF)
+    with open(output, "r+", encoding="utf-8") as f:
+        content = f.read()
+        f.seek(0)
+        f.write(f"<!-- run:{run_hash} -->\n" + content)
