@@ -1,50 +1,39 @@
 import requests
-import os
 import math
-
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 
-# -------------------- FILE SYSTEM --------------------
-os.makedirs("assets/svg", exist_ok=True)
+# =========================
+# CONFIG
+# =========================
 
-# -------------------- MATPLOTLIB GLOBAL STYLE --------------------
-BG_COLOR = "#F6F4EF"      # Ivory
-TEXT_COLOR = "#2A2529"    # Charcoal
-
-matplotlib.rcParams.update({
-    "figure.facecolor": BG_COLOR,
-    "axes.facecolor": BG_COLOR,
-    "axes.edgecolor": TEXT_COLOR,
-    "axes.labelcolor": TEXT_COLOR,
-    "xtick.color": TEXT_COLOR,
-    "ytick.color": TEXT_COLOR,
-    "text.color": TEXT_COLOR,
-    "svg.fonttype": "path",
-    "svg.image_inline": False,
-})
-
-# -------------------- CONFIG --------------------
-HEADERS = {
-    "User-Agent": "ChessRatingRefresh/1.0 atharvashimpi2005@gmail.com"
+USERNAME = "Atharva-Shimpi"
+RULES = "chess"
+NGAMES = {
+    "blitz": 100,
+    "rapid": 60,
+    "bullet": 50
 }
 
-USERNAME = "Wawa_wuwa"
-RULES = "chess"
-NGAMES = 100
-
-TIME_CLASSES = {
-    "blitz":  {"color": "#3E2F2A"},  # Umber
-    "rapid":  {"color": "#3A5F3A"},  # Moss Green
-    "bullet": {"color": "#1F2A44"},  # Midnight Blue
+# Color system (locked)
+COLORS = {
+    "background": "#F7F4EC",   # Ivory
+    "text": "#2A2529",         # Charcoal
+    "blitz": "#4A3B2A",        # Umber
+    "rapid": "#4F6F52",        # Moss Green
+    "bullet": "#24344D"        # Midnight Blue
 }
 
 ARCHIVES_URL = "https://api.chess.com/pub/player/{user}/games/archives"
 
-# -------------------- DATA FETCH --------------------
+# =========================
+# DATA
+# =========================
+
 def get_archives():
-    r = requests.get(ARCHIVES_URL.format(user=USERNAME), headers=HEADERS)
+    r = requests.get(ARCHIVES_URL.format(user=USERNAME))
     if r.status_code != 200:
         return []
     return r.json().get("archives", [])[::-1]
@@ -52,9 +41,8 @@ def get_archives():
 
 def get_ratings(time_class):
     games = []
-
     for archive in get_archives():
-        r = requests.get(archive, headers=HEADERS)
+        r = requests.get(archive)
         if r.status_code != 200:
             continue
 
@@ -65,89 +53,103 @@ def get_ratings(time_class):
         ][::-1]
 
         games.extend(filtered)
-        if len(games) >= NGAMES:
+        if len(games) >= NGAMES[time_class]:
             break
 
     ratings = []
-    for g in games[:NGAMES]:
+    for g in games[:NGAMES[time_class]]:
         side = "white" if g["white"]["username"].lower() == USERNAME.lower() else "black"
         ratings.append(g[side]["rating"])
 
-    return ratings[::-1]  # OLDEST → NEWEST (LEFT → RIGHT)
+    return ratings
 
-# -------------------- DOTTED FILL RENDER --------------------
-def plot_dotted_fill(ax, ratings, color):
-    x_positions = list(range(len(ratings)))
 
-    min_rating = min(ratings)
-    max_rating = max(ratings)
+# =========================
+# DRAWING
+# =========================
 
-    # Floating effect (negative spacing intuition)
-    y_floor = min_rating - (max_rating - min_rating) * 0.15
-    y_ceil  = max_rating + (max_rating - min_rating) * 0.15
+def draw_dotted_column_chart(ax, ratings, color):
+    baseline = min(ratings) - 25  # negative space above x-axis
+    step = 12                     # vertical dot spacing
 
-    dot_step = max(6, int((max_rating - min_rating) / 22))
+    for x, rating in enumerate(ratings):
+        dots = int((rating - baseline) / step)
+        for i in range(dots):
+            ax.scatter(
+                x,
+                baseline + i * step,
+                s=14,
+                color=color,
+                linewidths=0,
+                alpha=0.95
+            )
 
-    for x, rating in zip(x_positions, ratings):
-        y_values = list(range(int(y_floor), int(rating), dot_step))
-        ax.scatter(
-            [x] * len(y_values),
-            y_values,
-            s=18,
-            color=color,
-            alpha=0.95,
-            linewidths=0
-        )
 
-    ax.set_ylim(y_floor, y_ceil)
-    ax.set_xlim(-2, len(ratings) + 1)
+def style_axes(ax, title):
+    ax.set_facecolor(COLORS["background"])
 
-# -------------------- AXIS STYLE --------------------
-def style_axes(ax):
-    # Remove Y axis line
-    ax.spines["left"].set_visible(False)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
+    # Only bottom axis visible
+    for side in ["top", "left", "right"]:
+        ax.spines[side].set_visible(False)
 
-    # Keep subtle X baseline
-    ax.spines["bottom"].set_linewidth(1.2)
-    ax.spines["bottom"].set_alpha(0.4)
+    ax.spines["bottom"].set_color(COLORS["text"])
+    ax.spines["bottom"].set_linewidth(1.1)
 
-    ax.tick_params(axis="y", length=0)
-    ax.tick_params(axis="x", length=4, width=1, pad=6)
+    # Y-axis minimal
+    ax.yaxis.set_major_locator(MaxNLocator(5))
+    ax.tick_params(axis="y", colors=COLORS["text"], labelsize=9, length=0)
 
-    ax.grid(False)
+    # X-axis spacing + ticks
+    ax.tick_params(axis="x", colors=COLORS["text"], labelsize=9, pad=12)
 
-# -------------------- RENDER --------------------
-for time_class, cfg in TIME_CLASSES.items():
-    ratings = get_ratings(time_class)
+    # Title
+    ax.set_title(
+        title.upper(),
+        loc="left",
+        fontsize=12,
+        fontweight="bold",
+        color=COLORS["text"],
+        pad=16
+    )
 
-    fig, ax = plt.subplots(figsize=(11, 4.2))
+    # Footer label
+    ax.set_xlabel(
+        "GAMES (MOST RECENT →)",
+        fontsize=9,
+        fontweight="bold",
+        color=COLORS["text"],
+        labelpad=18
+    )
 
+
+# =========================
+# MAIN
+# =========================
+
+for mode in ["blitz", "rapid", "bullet"]:
+    ratings = get_ratings(mode)
     if not ratings:
-        ax.text(
-            0.5, 0.5, "No data available",
-            ha="center", va="center", fontsize=14
-        )
-        ax.axis("off")
-    else:
-        plot_dotted_fill(ax, ratings, cfg["color"])
-        style_axes(ax)
+        continue
 
-        # Title (micro editorial style)
-        ax.text(
-            0.0, 1.06,
-            f"{time_class.capitalize()} · Last {len(ratings)} games",
-            transform=ax.transAxes,
-            fontsize=13,
-            fontweight="medium",
-            ha="left",
-            va="bottom"
-        )
+    fig, ax = plt.subplots(figsize=(10.8, 4.4))
+    fig.patch.set_facecolor(COLORS["background"])
 
-    plt.tight_layout(pad=2)
+    draw_dotted_column_chart(ax, ratings, COLORS[mode])
+    style_axes(ax, f"{mode} · last {len(ratings)} games")
+
+    # Negative spacing (floating look)
+    ax.set_xlim(-3, len(ratings) + 2)
+    ax.set_ylim(min(ratings) - 40, max(ratings) + 40)
+
+    plt.subplots_adjust(
+        left=0.06,
+        right=0.985,
+        top=0.82,
+        bottom=0.24
+    )
+
     plt.savefig(
-        f"assets/svg/rating-{time_class}.svg",
+        f"assets/svg/rating-{mode}.svg",
         format="svg",
         bbox_inches="tight"
     )
