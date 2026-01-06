@@ -36,21 +36,22 @@ jobs:
         run: python codes/svg_charts.py
 
 
-      # 🔥 README is now built directly (no assets/)
       - name: Update README.md
         run: |
-          echo "# ♟️ Chess.com Rating Charts" > README.md
-          echo "## Blitz" >> README.md
-          echo '<img src="rating-blitz.svg" />' >> README.md
-          echo "" >> README.md
-          echo "## Rapid" >> README.md
-          echo '<img src="rating-rapid.svg" />' >> README.md
-          echo "" >> README.md
-          echo "## Bullet" >> README.md
-          echo '<img src="rating-bullet.svg" />' >> README.md
+          cat << 'EOF' > README.md
+          # ♟ Chess.com Rating Charts
+
+          ## Blitz
+          <img src="assets/svg/rating-blitz.svg" />
+
+          ## Rapid
+          <img src="assets/svg/rating-rapid.svg" />
+
+          ## Bullet
+          <img src="assets/svg/rating-bullet.svg" />
+          EOF
 
 
-      # 🔁 Keep random cron logic (unchanged)
       - name: Generate next random cron workflow
         run: |
           python codes/generate_random_workflow.py > rating-yaml.txt
@@ -75,6 +76,6 @@ jobs:
           author_name: Atharva Shimpi
           author_email: atharvashimpi2005@gmail.com
           message: "Auto updating README and workflow timing"
-          add: "README.md .github/workflows/rating-chart.yml *.svg"
+          add: "."
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN_1 }}
