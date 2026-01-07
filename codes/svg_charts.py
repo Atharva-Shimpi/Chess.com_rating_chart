@@ -220,5 +220,13 @@ for time_class, cfg in TIME_CLASSES.items():
         f"assets/svg/rating-{time_class}.svg",
         format="svg",
         bbox_inches="tight",
+        metadata={
+            "generated": datetime.datetime.utcnow().isoformat(),
+            "player": USERNAME,
+            "mode": time_class,
+            "games": str(len(ratings)),
+            "elo": str(ratings[-1]),
+        },
     )
+
     plt.close(fig)
