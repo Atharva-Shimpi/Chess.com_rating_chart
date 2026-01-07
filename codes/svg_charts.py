@@ -13,7 +13,7 @@ from matplotlib.patches import FancyBboxPatch
 # CONFIGURATION
 # =========================
 
-USERNAME = "Atharva-Shimpi"
+USERNAME = "Wawa_wuwa"
 RULES = "chess"
 
 TIME_CLASSES = {
