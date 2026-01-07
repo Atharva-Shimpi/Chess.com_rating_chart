@@ -11,7 +11,7 @@ from matplotlib.patches import FancyBboxPatch
 
 # ---------------- CONFIG ---------------- #
 
-USERNAME = "Atharva-Shimpi"
+USERNAME = "Wawa_wuwa"
 RULES = "chess"
 
 TIME_CLASSES = {
