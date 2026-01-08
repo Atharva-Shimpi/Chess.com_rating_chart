@@ -1,5 +1,6 @@
 import requests
 import os
+import math
 
 import matplotlib
 matplotlib.use("Agg")
@@ -8,7 +9,7 @@ import matplotlib.pyplot as plt
 # -------------------- FILE SYSTEM --------------------
 os.makedirs("assets/svg", exist_ok=True)
 
-# -------------------- GLOBAL STYLE --------------------
+# -------------------- MATPLOTLIB GLOBAL STYLE --------------------
 BG_COLOR = "#F6F4EF"      # Ivory
 TEXT_COLOR = "#2A2529"    # Charcoal
 
@@ -29,8 +30,7 @@ HEADERS = {
     "User-Agent": "ChessRatingRefresh/1.0 atharvashimpi2005@gmail.com"
 }
 
-# Phase 0: Explicit username lock-in
-USERNAME = "Wawa_wuwa"   # <-- confirmed username
+USERNAME = "Wawa_wuwa"
 RULES = "chess"
 NGAMES = 100
 
@@ -70,53 +70,49 @@ def get_ratings(time_class):
 
     ratings = []
     for g in games[:NGAMES]:
-        side = (
-            "white"
-            if g["white"]["username"].lower() == USERNAME.lower()
-            else "black"
-        )
+        side = "white" if g["white"]["username"].lower() == USERNAME.lower() else "black"
         ratings.append(g[side]["rating"])
 
-    # Oldest → newest (left → right)
-    return ratings[::-1]
+    return ratings[::-1]  # OLDEST → NEWEST (LEFT → RIGHT)
 
-# -------------------- PHASE 2: DOTTED FILL --------------------
+# -------------------- DOTTED FILL RENDER --------------------
 def plot_dotted_fill(ax, ratings, color):
-    """
-    Draw vertical dotted columns.
-    Dots fill from a dynamic minimum (baseline) up to rating value.
-    """
-
-    x_positions = list(range(len(ratings)))
+    # ✅ FIX: 1-based indexing
+    x_positions = list(range(1, len(ratings) + 1))
 
     min_rating = min(ratings)
     max_rating = max(ratings)
 
-    # Dynamic baseline (NOT zero, avoids wasted space)
-    rating_range = max_rating - min_rating
-    baseline = min_rating - rating_range * 0.15
-    ceiling  = max_rating + rating_range * 0.15
+    # Floating effect (dynamic minimum)
+    y_floor = min_rating - (max_rating - min_rating) * 0.15
+    y_ceil  = max_rating + (max_rating - min_rating) * 0.15
 
-    # Dot density (tuned for calm visual rhythm)
-    dot_step = max(6, int(rating_range / 22))
+    dot_step = max(6, int((max_rating - min_rating) / 22))
 
     for x, rating in zip(x_positions, ratings):
-        y = baseline
-        while y <= rating:
-            ax.scatter(
-                x,
-                y,
-                s=18,
-                color=color,
-                alpha=0.95,
-                linewidths=0
-            )
-            y += dot_step
+        y_values = list(range(int(y_floor), int(rating), dot_step))
+        ax.scatter(
+            [x] * len(y_values),
+            y_values,
+            s=18,
+            color=color,
+            alpha=0.95,
+            linewidths=0
+        )
 
-    ax.set_ylim(baseline, ceiling)
-    ax.set_xlim(-2, len(ratings) + 1)
+    # ✅ FIX: aligned x-axis bounds
+    ax.set_ylim(y_floor, y_ceil)
+    ax.set_xlim(0.5, len(ratings) + 0.5)
 
-# -------------------- AXIS STYLE (UNCHANGED) --------------------
+    # Clean x ticks
+    ax.set_xticks([1, len(ratings)//2, len(ratings)])
+    ax.set_xticklabels([
+        "1",
+        f"{len(ratings)//2}",
+        f"{len(ratings)}"
+    ])
+
+# -------------------- AXIS STYLE --------------------
 def style_axes(ax):
     ax.spines["left"].set_visible(False)
     ax.spines["top"].set_visible(False)
@@ -127,7 +123,6 @@ def style_axes(ax):
 
     ax.tick_params(axis="y", length=0)
     ax.tick_params(axis="x", length=4, width=1, pad=6)
-
     ax.grid(False)
 
 # -------------------- RENDER --------------------
@@ -138,23 +133,20 @@ for time_class, cfg in TIME_CLASSES.items():
 
     if not ratings:
         ax.text(
-            0.5, 0.5,
-            "NO DATA AVAILABLE",
-            ha="center",
-            va="center",
-            fontsize=14
+            0.5, 0.5, "NO DATA AVAILABLE",
+            ha="center", va="center", fontsize=14
         )
         ax.axis("off")
     else:
         plot_dotted_fill(ax, ratings, cfg["color"])
         style_axes(ax)
 
-        # Temporary title (will be replaced in later phases)
         ax.text(
             0.0, 1.06,
             f"{time_class.upper()} · LAST {len(ratings)} GAMES",
             transform=ax.transAxes,
             fontsize=13,
+            fontweight="medium",
             ha="left",
             va="bottom"
         )
