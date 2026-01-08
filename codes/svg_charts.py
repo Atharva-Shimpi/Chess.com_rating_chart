@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 # -------------------- FILE SYSTEM --------------------
 os.makedirs("assets/svg", exist_ok=True)
 
-# -------------------- GLOBAL STYLE --------------------
+# -------------------- MATPLOTLIB GLOBAL STYLE --------------------
 BG_COLOR = "#F6F4EF"      # Ivory
 TEXT_COLOR = "#2A2529"    # Charcoal
 
@@ -26,7 +26,9 @@ matplotlib.rcParams.update({
 })
 
 # -------------------- CONFIG --------------------
-HEADERS = {"User-Agent": "ChessRatingRefresh/1.0"}
+HEADERS = {
+    "User-Agent": "ChessRatingRefresh/1.0"
+}
 
 USERNAME = "Wawa_wuwa"
 RULES = "chess"
@@ -71,30 +73,29 @@ def get_ratings(time_class):
         side = "white" if g["white"]["username"].lower() == USERNAME.lower() else "black"
         ratings.append(g[side]["rating"])
 
-    return ratings[::-1]  # oldest → newest
+    return ratings[::-1]  # OLDEST → NEWEST
 
-
-# -------------------- DOTTED FLOAT FILL --------------------
+# -------------------- DOTTED FILL RENDER --------------------
 def plot_dotted_fill(ax, ratings, color):
-    x_vals = list(range(1, len(ratings) + 1))
+    x_positions = list(range(len(ratings)))
 
-    real_min = min(ratings)
-    real_max = max(ratings)
-    span = real_max - real_min
+    min_rating = min(ratings)
+    max_rating = max(ratings)
+    rating_range = max_rating - min_rating
 
-    # 🔑 FLOAT CONTROL (THIS IS THE KNOB)
-    float_ratio = 0.18           # tweakable: 0.15–0.22
-    visual_min = real_min - span * float_ratio
+    # --- FLOATING LOGIC ---
+    float_base = min_rating
+    axis_floor = min_rating - rating_range * 0.15
+    axis_ceiling = max_rating + rating_range * 0.15
 
-    dot_step = max(6, int(span / 22))
+    dot_step = max(6, int(rating_range / 22))
 
-    for x, rating in zip(x_vals, ratings):
+    for x, rating in zip(x_positions, ratings):
         y_values = list(range(
-            int(visual_min),
-            int(rating) + 1,
+            int(float_base),
+            int(rating) + dot_step,
             dot_step
         ))
-
         ax.scatter(
             [x] * len(y_values),
             y_values,
@@ -104,13 +105,11 @@ def plot_dotted_fill(ax, ratings, color):
             linewidths=0
         )
 
-    # Axis limits preserve float
-    ax.set_ylim(visual_min, real_max + span * 0.15)
-    ax.set_xlim(0, len(ratings) + 1)
-
+    ax.set_ylim(axis_floor, axis_ceiling)
+    ax.set_xlim(-2, len(ratings) + 1)
 
 # -------------------- AXIS STYLE --------------------
-def style_axes(ax, total_games):
+def style_axes(ax):
     ax.spines["left"].set_visible(False)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
@@ -121,12 +120,7 @@ def style_axes(ax, total_games):
     ax.tick_params(axis="y", length=0)
     ax.tick_params(axis="x", length=4, width=1, pad=6)
 
-    # exactly 6 x-ticks
-    ticks = [1 + i * (total_games - 1) // 5 for i in range(6)]
-    ax.set_xticks(ticks)
-
     ax.grid(False)
-
 
 # -------------------- RENDER --------------------
 for time_class, cfg in TIME_CLASSES.items():
@@ -140,14 +134,13 @@ for time_class, cfg in TIME_CLASSES.items():
         ax.axis("off")
     else:
         plot_dotted_fill(ax, ratings, cfg["color"])
-        style_axes(ax, len(ratings))
+        style_axes(ax)
 
         ax.text(
             0.0, 1.06,
             f"{time_class.upper()} · LAST {len(ratings)} GAMES",
             transform=ax.transAxes,
             fontsize=13,
-            fontweight="medium",
             ha="left",
             va="bottom"
         )
