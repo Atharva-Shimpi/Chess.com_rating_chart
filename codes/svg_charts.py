@@ -29,8 +29,7 @@ HEADERS = {
     "User-Agent": "ChessRatingRefresh/1.0 atharvashimpi2005@gmail.com"
 }
 
-# Phase 0: Explicit username lock-in
-USERNAME = "Wawa_wuwa"   # <-- confirmed username
+USERNAME = "Wawa_wuwa"   # confirmed
 RULES = "chess"
 NGAMES = 100
 
@@ -80,28 +79,23 @@ def get_ratings(time_class):
     # Oldest → newest (left → right)
     return ratings[::-1]
 
-# -------------------- PHASE 2: DOTTED FILL --------------------
+# -------------------- PHASE 3: DYNAMIC MIN + FLOAT --------------------
 def plot_dotted_fill(ax, ratings, color):
-    """
-    Draw vertical dotted columns.
-    Dots fill from a dynamic minimum (baseline) up to rating value.
-    """
-
     x_positions = list(range(len(ratings)))
 
     min_rating = min(ratings)
     max_rating = max(ratings)
-
-    # Dynamic baseline (NOT zero, avoids wasted space)
     rating_range = max_rating - min_rating
-    baseline = min_rating - rating_range * 0.15
-    ceiling  = max_rating + rating_range * 0.15
 
-    # Dot density (tuned for calm visual rhythm)
+    # 🔹 Phase 3 core logic
+    padding = max(20, rating_range * 0.15)
+    dynamic_min = min_rating - padding
+    dynamic_max = max_rating + padding
+
     dot_step = max(6, int(rating_range / 22))
 
     for x, rating in zip(x_positions, ratings):
-        y = baseline
+        y = dynamic_min
         while y <= rating:
             ax.scatter(
                 x,
@@ -113,7 +107,7 @@ def plot_dotted_fill(ax, ratings, color):
             )
             y += dot_step
 
-    ax.set_ylim(baseline, ceiling)
+    ax.set_ylim(dynamic_min, dynamic_max)
     ax.set_xlim(-2, len(ratings) + 1)
 
 # -------------------- AXIS STYLE (UNCHANGED) --------------------
@@ -149,7 +143,6 @@ for time_class, cfg in TIME_CLASSES.items():
         plot_dotted_fill(ax, ratings, cfg["color"])
         style_axes(ax)
 
-        # Temporary title (will be replaced in later phases)
         ax.text(
             0.0, 1.06,
             f"{time_class.upper()} · LAST {len(ratings)} GAMES",
