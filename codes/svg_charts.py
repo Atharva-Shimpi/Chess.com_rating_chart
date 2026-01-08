@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 # -------------------- FILE SYSTEM --------------------
 os.makedirs("assets/svg", exist_ok=True)
 
-# -------------------- MATPLOTLIB GLOBAL STYLE --------------------
+# -------------------- GLOBAL STYLE --------------------
 BG_COLOR = "#F6F4EF"      # Ivory
 TEXT_COLOR = "#2A2529"    # Charcoal
 
@@ -27,7 +27,7 @@ matplotlib.rcParams.update({
 
 # -------------------- CONFIG --------------------
 HEADERS = {
-    "User-Agent": "ChessRatingRefresh/1.0 atharvashimpi2005@gmail.com"
+    "User-Agent": "ChessRatingRefresh/1.0"
 }
 
 USERNAME = "Wawa_wuwa"
@@ -73,38 +73,38 @@ def get_ratings(time_class):
         side = "white" if g["white"]["username"].lower() == USERNAME.lower() else "black"
         ratings.append(g[side]["rating"])
 
-    return ratings[::-1]  # OLDEST → NEWEST (LEFT → RIGHT)
+    return ratings[::-1]  # OLDEST → NEWEST
 
-# -------------------- DOTTED FILL (FLOAT-SAFE) --------------------
+
+# -------------------- DOTTED FLOAT FILL --------------------
 def plot_dotted_fill(ax, ratings, color):
-    x_positions = list(range(len(ratings)))
+    x_vals = list(range(1, len(ratings) + 1))
 
     min_rating = min(ratings)
     max_rating = max(ratings)
-    rating_range = max_rating - min_rating
 
-    # ---- FLOAT CONFIG (designer-tunable) ----
-    float_ratio = 0.18              # controls distance from axis
-    top_padding_ratio = 0.15
+    rating_span = max_rating - min_rating
 
-    float_base = min_rating - rating_range * float_ratio
-    y_axis_floor = float_base - rating_range * 0.08
-    y_ceil = max_rating + rating_range * top_padding_ratio
+    # --- FLOATING BASE (tunable) ---
+    float_ratio = 0.18               # 👈 tweak this safely (0.15–0.22 sweet spot)
+    float_base = min_rating - rating_span * float_ratio
 
-    # Dot density (stable across charts)
-    dot_step = max(6, int(rating_range / 22))
+    # --- DOT RESOLUTION ---
+    dot_step = max(6, int(rating_span / 22))
 
-    for x, rating in zip(x_positions, ratings):
-        # Shift rating into display space
-        display_height = rating - min_rating + float_base
+    for x, rating in zip(x_vals, ratings):
+        # Ensure minimum rating ALWAYS gets a dot
+        top = max(rating, min_rating)
 
-        y_values = list(
-            range(
-                int(float_base),
-                int(display_height) + 1,
-                dot_step
-            )
-        )
+        y_values = list(range(
+            int(float_base),
+            int(top) + 1,             # 👈 ensures bottom alignment
+            dot_step
+        ))
+
+        # Force-align minimum dots exactly at min_rating
+        if rating == min_rating and min_rating not in y_values:
+            y_values.append(min_rating)
 
         ax.scatter(
             [x] * len(y_values),
@@ -115,8 +115,10 @@ def plot_dotted_fill(ax, ratings, color):
             linewidths=0
         )
 
-    ax.set_ylim(y_axis_floor, y_ceil)
-    ax.set_xlim(-2, len(ratings) + 1)
+    # --- AXIS LIMITS ---
+    ax.set_ylim(float_base, max_rating + rating_span * 0.15)
+    ax.set_xlim(0, len(ratings) + 1)
+
 
 # -------------------- AXIS STYLE --------------------
 def style_axes(ax, total_games):
@@ -130,13 +132,12 @@ def style_axes(ax, total_games):
     ax.tick_params(axis="y", length=0)
     ax.tick_params(axis="x", length=4, width=1, pad=6)
 
-    # Exactly 6 X ticks
-    tick_count = 6
-    ticks = [int(i * (total_games - 1) / (tick_count - 1)) for i in range(tick_count)]
+    # EXACTLY 6 X TICKS
+    ticks = [1 + i * (total_games - 1) // 5 for i in range(6)]
     ax.set_xticks(ticks)
-    ax.set_xticklabels([str(t + 1) for t in ticks])
 
     ax.grid(False)
+
 
 # -------------------- RENDER --------------------
 for time_class, cfg in TIME_CLASSES.items():
@@ -145,10 +146,8 @@ for time_class, cfg in TIME_CLASSES.items():
     fig, ax = plt.subplots(figsize=(11, 4.2))
 
     if not ratings:
-        ax.text(
-            0.5, 0.5, "No data available",
-            ha="center", va="center", fontsize=14
-        )
+        ax.text(0.5, 0.5, "No data available",
+                ha="center", va="center", fontsize=14)
         ax.axis("off")
     else:
         plot_dotted_fill(ax, ratings, cfg["color"])
