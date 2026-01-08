@@ -29,7 +29,8 @@ HEADERS = {
     "User-Agent": "ChessRatingRefresh/1.0 atharvashimpi2005@gmail.com"
 }
 
-USERNAME = "Wawa_wuwa"
+# Phase 0: Explicit username lock-in
+USERNAME = "Wawa_wuwa"   # <-- confirmed username
 RULES = "chess"
 NGAMES = 100
 
@@ -79,28 +80,28 @@ def get_ratings(time_class):
     # Oldest → newest (left → right)
     return ratings[::-1]
 
-# -------------------- PHASE 3: DYNAMIC MIN + FLOATING --------------------
+# -------------------- PHASE 2: DOTTED FILL --------------------
 def plot_dotted_fill(ax, ratings, color):
     """
-    Vertical dotted fill that floats using a dynamic minimum.
+    Draw vertical dotted columns.
+    Dots fill from a dynamic minimum (baseline) up to rating value.
     """
 
     x_positions = list(range(len(ratings)))
 
     min_rating = min(ratings)
     max_rating = max(ratings)
+
+    # Dynamic baseline (NOT zero, avoids wasted space)
     rating_range = max_rating - min_rating
+    baseline = min_rating - rating_range * 0.15
+    ceiling  = max_rating + rating_range * 0.15
 
-    # Phase 3: Dynamic floating bounds
-    padding = rating_range * 0.18
-    dynamic_min = min_rating - padding
-    dynamic_max = max_rating + padding
-
-    # Dot density
+    # Dot density (tuned for calm visual rhythm)
     dot_step = max(6, int(rating_range / 22))
 
     for x, rating in zip(x_positions, ratings):
-        y = dynamic_min
+        y = baseline
         while y <= rating:
             ax.scatter(
                 x,
@@ -112,10 +113,10 @@ def plot_dotted_fill(ax, ratings, color):
             )
             y += dot_step
 
-    ax.set_ylim(dynamic_min, dynamic_max)
+    ax.set_ylim(baseline, ceiling)
     ax.set_xlim(-2, len(ratings) + 1)
 
-# -------------------- AXIS STYLE --------------------
+# -------------------- AXIS STYLE (UNCHANGED) --------------------
 def style_axes(ax):
     ax.spines["left"].set_visible(False)
     ax.spines["top"].set_visible(False)
@@ -148,6 +149,7 @@ for time_class, cfg in TIME_CLASSES.items():
         plot_dotted_fill(ax, ratings, cfg["color"])
         style_axes(ax)
 
+        # Temporary title (will be replaced in later phases)
         ax.text(
             0.0, 1.06,
             f"{time_class.upper()} · LAST {len(ratings)} GAMES",
