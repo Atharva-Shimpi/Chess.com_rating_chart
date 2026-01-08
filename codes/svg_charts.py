@@ -27,7 +27,7 @@ matplotlib.rcParams.update({
 
 # -------------------- CONFIG --------------------
 HEADERS = {
-    "User-Agent": "ChessRatingRefresh/1.0 atharvashimpi2005@gmail.com"
+    "User-Agent": "ChessRatingRefresh/1.0"
 }
 
 USERNAME = "Wawa_wuwa"
@@ -73,24 +73,30 @@ def get_ratings(time_class):
         side = "white" if g["white"]["username"].lower() == USERNAME.lower() else "black"
         ratings.append(g[side]["rating"])
 
-    return ratings[::-1]  # OLDEST → NEWEST (LEFT → RIGHT)
+    return ratings[::-1]  # oldest → newest (left → right)
 
 # -------------------- DOTTED FILL RENDER --------------------
 def plot_dotted_fill(ax, ratings, color):
-    # ✅ FIX: 1-based indexing
     x_positions = list(range(1, len(ratings) + 1))
 
     min_rating = min(ratings)
     max_rating = max(ratings)
+    rating_range = max_rating - min_rating
 
-    # Floating effect (dynamic minimum)
-    y_floor = min_rating - (max_rating - min_rating) * 0.15
-    y_ceil  = max_rating + (max_rating - min_rating) * 0.15
+    # 🟢 PHASE 3: dynamic floating bounds
+    padding = rating_range * 0.18
+    dynamic_min = min_rating - padding
+    dynamic_max = max_rating + padding
 
-    dot_step = max(6, int((max_rating - min_rating) / 22))
+    # Dot density
+    dot_step = max(6, int(rating_range / 22))
 
     for x, rating in zip(x_positions, ratings):
-        y_values = list(range(int(y_floor), int(rating), dot_step))
+        y_values = list(range(
+            int(dynamic_min),
+            int(rating),
+            dot_step
+        ))
         ax.scatter(
             [x] * len(y_values),
             y_values,
@@ -100,11 +106,20 @@ def plot_dotted_fill(ax, ratings, color):
             linewidths=0
         )
 
-    # ✅ FIX: aligned x-axis bounds
-    ax.set_ylim(y_floor, y_ceil)
+    # Apply floating limits
+    ax.set_ylim(dynamic_min, dynamic_max)
     ax.set_xlim(0.5, len(ratings) + 0.5)
 
-    # Clean x ticks
+    # 🟢 Reduced Y ticks (max 6)
+    ax.set_yticks([
+        round(dynamic_min),
+        round(dynamic_min + rating_range * 0.25),
+        round(dynamic_min + rating_range * 0.5),
+        round(dynamic_min + rating_range * 0.75),
+        round(dynamic_max),
+    ])
+
+    # Clean X ticks
     ax.set_xticks([1, len(ratings)//2, len(ratings)])
     ax.set_xticklabels([
         "1",
@@ -119,9 +134,9 @@ def style_axes(ax):
     ax.spines["right"].set_visible(False)
 
     ax.spines["bottom"].set_linewidth(1.2)
-    ax.spines["bottom"].set_alpha(0.4)
+    ax.spines["bottom"].set_alpha(0.45)
 
-    ax.tick_params(axis="y", length=0)
+    ax.tick_params(axis="y", length=0, pad=6)
     ax.tick_params(axis="x", length=4, width=1, pad=6)
     ax.grid(False)
 
