@@ -26,9 +26,7 @@ matplotlib.rcParams.update({
 })
 
 # -------------------- CONFIG --------------------
-HEADERS = {
-    "User-Agent": "ChessRatingRefresh/1.0"
-}
+HEADERS = {"User-Agent": "ChessRatingRefresh/1.0"}
 
 USERNAME = "Wawa_wuwa"
 RULES = "chess"
@@ -73,38 +71,29 @@ def get_ratings(time_class):
         side = "white" if g["white"]["username"].lower() == USERNAME.lower() else "black"
         ratings.append(g[side]["rating"])
 
-    return ratings[::-1]  # OLDEST → NEWEST
+    return ratings[::-1]  # oldest → newest
 
 
 # -------------------- DOTTED FLOAT FILL --------------------
 def plot_dotted_fill(ax, ratings, color):
     x_vals = list(range(1, len(ratings) + 1))
 
-    min_rating = min(ratings)
-    max_rating = max(ratings)
+    real_min = min(ratings)
+    real_max = max(ratings)
+    span = real_max - real_min
 
-    rating_span = max_rating - min_rating
+    # 🔑 FLOAT CONTROL (THIS IS THE KNOB)
+    float_ratio = 0.18           # tweakable: 0.15–0.22
+    visual_min = real_min - span * float_ratio
 
-    # --- FLOATING BASE (tunable) ---
-    float_ratio = 0.18               # 👈 tweak this safely (0.15–0.22 sweet spot)
-    float_base = min_rating - rating_span * float_ratio
-
-    # --- DOT RESOLUTION ---
-    dot_step = max(6, int(rating_span / 22))
+    dot_step = max(6, int(span / 22))
 
     for x, rating in zip(x_vals, ratings):
-        # Ensure minimum rating ALWAYS gets a dot
-        top = max(rating, min_rating)
-
         y_values = list(range(
-            int(float_base),
-            int(top) + 1,             # 👈 ensures bottom alignment
+            int(visual_min),
+            int(rating) + 1,
             dot_step
         ))
-
-        # Force-align minimum dots exactly at min_rating
-        if rating == min_rating and min_rating not in y_values:
-            y_values.append(min_rating)
 
         ax.scatter(
             [x] * len(y_values),
@@ -115,8 +104,8 @@ def plot_dotted_fill(ax, ratings, color):
             linewidths=0
         )
 
-    # --- AXIS LIMITS ---
-    ax.set_ylim(float_base, max_rating + rating_span * 0.15)
+    # Axis limits preserve float
+    ax.set_ylim(visual_min, real_max + span * 0.15)
     ax.set_xlim(0, len(ratings) + 1)
 
 
@@ -132,7 +121,7 @@ def style_axes(ax, total_games):
     ax.tick_params(axis="y", length=0)
     ax.tick_params(axis="x", length=4, width=1, pad=6)
 
-    # EXACTLY 6 X TICKS
+    # exactly 6 x-ticks
     ticks = [1 + i * (total_games - 1) // 5 for i in range(6)]
     ax.set_xticks(ticks)
 
