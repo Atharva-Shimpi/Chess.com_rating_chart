@@ -1,6 +1,7 @@
 import requests
 import os
 import math
+import numpy as np
 
 import matplotlib
 matplotlib.use("Agg")
@@ -26,9 +27,7 @@ matplotlib.rcParams.update({
 })
 
 # -------------------- CONFIG --------------------
-HEADERS = {
-    "User-Agent": "ChessRatingRefresh/1.0"
-}
+HEADERS = {"User-Agent": "ChessRatingRefresh/1.0"}
 
 USERNAME = "Wawa_wuwa"
 RULES = "chess"
@@ -83,17 +82,18 @@ def plot_dotted_fill(ax, ratings, color):
     max_rating = max(ratings)
     rating_range = max_rating - min_rating
 
-    # --- FLOATING LOGIC ---
+    # --- FLOATING BASE (LOCKED) ---
     float_base = min_rating
-    axis_floor = min_rating - rating_range * 0.15
+
+    axis_floor = float_base - rating_range * 0.18
     axis_ceiling = max_rating + rating_range * 0.15
 
     dot_step = max(6, int(rating_range / 22))
 
     for x, rating in zip(x_positions, ratings):
         y_values = list(range(
-            int(float_base),
-            int(rating) + dot_step,
+            float_base,
+            rating + dot_step,
             dot_step
         ))
         ax.scatter(
@@ -107,6 +107,10 @@ def plot_dotted_fill(ax, ratings, color):
 
     ax.set_ylim(axis_floor, axis_ceiling)
     ax.set_xlim(-2, len(ratings) + 1)
+
+    # -------- Y-TICKS (≤ 6, EVEN) --------
+    yticks = np.linspace(float_base, axis_ceiling, 6)
+    ax.set_yticks(yticks.astype(int))
 
 # -------------------- AXIS STYLE --------------------
 def style_axes(ax):
@@ -129,7 +133,7 @@ for time_class, cfg in TIME_CLASSES.items():
     fig, ax = plt.subplots(figsize=(11, 4.2))
 
     if not ratings:
-        ax.text(0.5, 0.5, "No data available",
+        ax.text(0.5, 0.5, "NO DATA AVAILABLE",
                 ha="center", va="center", fontsize=14)
         ax.axis("off")
     else:
