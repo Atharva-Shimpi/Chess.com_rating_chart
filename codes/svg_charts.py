@@ -1,143 +1,152 @@
-import requests
-import matplotlib
+import math
 import matplotlib.pyplot as plt
 import numpy as np
 
-# ---------------- CONFIG ----------------
 
-USERNAME = "Wawa_wuwa"
-RULES = "chess"
+# =========================
+# CONFIGURATION (SAFE TO TUNE)
+# =========================
+SVG_WIDTH = 1200
+SVG_HEIGHT = 260
 
-TIME_CLASSES = {
-    "blitz": {"games": 100, "color": "#5a4a42"},   # Umber
-    "rapid": {"games": 66,  "color": "#4f6b4f"},   # Moss Green
-    "bullet": {"games": 53, "color": "#2f3b52"},   # Midnight Blue
-}
+LEFT_MARGIN = 80
+RIGHT_MARGIN = 30
+TOP_MARGIN = 28
+BOTTOM_MARGIN = 40
 
-BACKGROUND = "#f7f5ee"   # Ivory
-TEXT_COLOR = "#2A2529"   # Charcoal
+FLOAT_GAP_PX = 18        # X-axis → floating base
+Y_LABEL_GAP_PX = 14     # Y labels → dot grid
+X_LABEL_GAP_PX = 10
 
-# Layout tuning (easy knobs)
-FLOAT_PADDING_RATIO = 0.08      # space below dots
-TOP_PADDING_RATIO   = 0.10      # headroom above dots
-Y_LABEL_OFFSET_RATIO = 0.04     # keeps labels visually above dot base
-LEFT_GRAPH_PADDING = 0.6        # x-space before first column of dots
-
+DOT_STEP = 8             # rating units per dot row
+DOT_RADIUS = 2.1
 MAX_Y_TICKS = 6
 
-matplotlib.rcParams["svg.image_inline"] = False
-matplotlib.rcParams["svg.fonttype"] = "path"
 
-ARCHIVES_URL = "https://api.chess.com/pub/player/{user}/games/archives"
+# =========================
+# CORE RENDER FUNCTION
+# =========================
+def render_dot_chart(
+    ratings,
+    title,
+    color,
+    output_path,
+):
+    n = len(ratings)
+    x_vals = np.arange(1, n + 1)
 
-# ---------------- DATA ----------------
-
-def get_archives():
-    r = requests.get(ARCHIVES_URL.format(user=USERNAME))
-    if r.status_code != 200:
-        return []
-    return r.json().get("archives", [])[::-1]
-
-def get_ratings(time_class, n_games):
-    games = []
-    for archive in get_archives():
-        r = requests.get(archive)
-        if r.status_code != 200:
-            continue
-
-        data = r.json().get("games", [])
-        filtered = [
-            g for g in data
-            if g.get("time_class") == time_class and g.get("rules") == RULES
-        ][::-1]
-
-        games.extend(filtered)
-        if len(games) >= n_games:
-            break
-
-    ratings = []
-    for g in games[:n_games]:
-        side = "white" if g["white"]["username"].lower() == USERNAME.lower() else "black"
-        ratings.append(g[side]["rating"])
-
-    return ratings
-
-# ---------------- PLOTTING ----------------
-
-def plot_dotted_columns(ax, ratings, color):
     min_rating = min(ratings)
     max_rating = max(ratings)
-    rating_range = max_rating - min_rating
 
-    float_padding = rating_range * FLOAT_PADDING_RATIO
-    top_padding   = rating_range * TOP_PADDING_RATIO
+    # Dynamic range with breathing room
+    padding = (max_rating - min_rating) * 0.08
+    y_min = min_rating - padding
+    y_max = max_rating + padding
+    rating_range = y_max - y_min
 
-    float_base = min_rating - float_padding
-    ceiling    = max_rating + top_padding
+    # --- SVG space calculations ---
+    chart_width = SVG_WIDTH - LEFT_MARGIN - RIGHT_MARGIN
+    chart_height = SVG_HEIGHT - TOP_MARGIN - BOTTOM_MARGIN
 
-    dot_step = max(6, int(rating_range / 22))
+    x_axis_y = TOP_MARGIN + chart_height
+    float_base_y = x_axis_y - FLOAT_GAP_PX
 
-    # draw dots
-    for x, r in enumerate(ratings):
-        y_vals = np.arange(float_base, r + 0.01, dot_step)
-        ax.scatter(
-            [x + LEFT_GRAPH_PADDING] * len(y_vals),
-            y_vals,
-            s=10,
-            color=color,
-            linewidths=0
-        )
+    # Grid height is limited by highest dot
+    grid_height = float_base_y - TOP_MARGIN
 
-    # axis limits
-    ax.set_xlim(LEFT_GRAPH_PADDING - 0.4, len(ratings) + LEFT_GRAPH_PADDING)
-    ax.set_ylim(float_base, ceiling)
+    # --- Figure ---
+    fig = plt.figure(figsize=(SVG_WIDTH / 100, SVG_HEIGHT / 100), dpi=100)
+    ax = plt.gca()
+    ax.set_xlim(0, SVG_WIDTH)
+    ax.set_ylim(SVG_HEIGHT, 0)
+    ax.axis("off")
 
-    # ---------- Y AXIS (editorial separation) ----------
-    # Labels live ABOVE dot base — not on it
-    y_label_start = float_base + rating_range * Y_LABEL_OFFSET_RATIO
-    y_ticks = np.linspace(y_label_start, ceiling, MAX_Y_TICKS)
-
-    ax.set_yticks(y_ticks)
-    ax.set_yticklabels([f"{int(t)}" for t in y_ticks], color=TEXT_COLOR)
-
-    # ---------- X AXIS ----------
-    x_ticks = np.linspace(LEFT_GRAPH_PADDING, len(ratings), 6)
-    ax.set_xticks(x_ticks)
-    ax.set_xticklabels([str(int(t - LEFT_GRAPH_PADDING)) for t in x_ticks], color=TEXT_COLOR)
-
-    # ---------- CLEANUP ----------
-    ax.grid(False)
-
-    for spine in ["top", "right", "left"]:
-        ax.spines[spine].set_visible(False)
-
-    ax.spines["bottom"].set_color("#999999")
-    ax.spines["bottom"].set_linewidth(1)
-
-    ax.tick_params(axis="y", length=0)
-    ax.tick_params(axis="x", colors=TEXT_COLOR)
-
-# ---------------- MAIN ----------------
-
-for time_class, cfg in TIME_CLASSES.items():
-    ratings = get_ratings(time_class, cfg["games"])
-    if not ratings:
-        continue
-
-    fig, ax = plt.subplots(figsize=(10, 4))
-    fig.patch.set_facecolor(BACKGROUND)
-    ax.set_facecolor(BACKGROUND)
-
-    plot_dotted_columns(ax, ratings, cfg["color"])
-
-    ax.set_title(
-        f"{time_class.upper()} · LAST {len(ratings)} GAMES",
-        loc="left",
-        fontsize=11,
-        color=TEXT_COLOR,
-        pad=12
+    # --- Title ---
+    ax.text(
+        LEFT_MARGIN,
+        TOP_MARGIN - 8,
+        title.upper(),
+        ha="left",
+        va="bottom",
+        fontsize=10,
+        color="#2A2529",
+        fontweight="medium",
     )
 
-    plt.tight_layout()
-    plt.savefig(f"rating-{time_class}.svg")
-    plt.close()
+    # --- X-axis ---
+    ax.plot(
+        [LEFT_MARGIN, SVG_WIDTH - RIGHT_MARGIN],
+        [x_axis_y, x_axis_y],
+        color="#8A8A8A",
+        linewidth=1,
+    )
+
+    # X ticks (6 evenly spaced)
+    tick_indices = np.linspace(0, n - 1, 6, dtype=int)
+    for idx in tick_indices:
+        x = LEFT_MARGIN + (idx / (n - 1)) * chart_width
+        ax.text(
+            x,
+            x_axis_y + X_LABEL_GAP_PX,
+            str(idx + 1),
+            ha="center",
+            va="top",
+            fontsize=9,
+            color="#2A2529",
+        )
+
+    # --- Y-axis labels (OUTSIDE, baseline aligned) ---
+    y_ticks = np.linspace(min_rating, max_rating, MAX_Y_TICKS)
+
+    for val in y_ticks:
+        y = float_base_y - ((val - y_min) / rating_range) * grid_height
+        ax.text(
+            LEFT_MARGIN - Y_LABEL_GAP_PX,
+            y,
+            f"{int(round(val))}",
+            ha="right",
+            va="baseline",
+            fontsize=9,
+            color="#2A2529",
+        )
+
+    # --- Dot grid ---
+    for i, rating in enumerate(ratings):
+        x = LEFT_MARGIN + (i / (n - 1)) * chart_width
+
+        dot_levels = int((rating - y_min) // DOT_STEP)
+        for level in range(dot_levels + 1):
+            dot_y = float_base_y - (level * DOT_STEP / rating_range) * grid_height
+            ax.add_patch(
+                plt.Circle(
+                    (x, dot_y),
+                    DOT_RADIUS,
+                    color=color,
+                    linewidth=0,
+                )
+            )
+
+    # --- Export ---
+    plt.savefig(output_path, format="svg", bbox_inches="tight", pad_inches=0)
+    plt.close(fig)
+
+
+# =========================
+# PUBLIC API
+# =========================
+def generate_chart(ratings, mode):
+    COLORS = {
+        "blitz": "#4A3F35",   # Umber
+        "rapid": "#4E6B4C",   # Moss Green
+        "bullet": "#1F2A44",  # Midnight Blue
+    }
+
+    title = f"{mode.upper()} · LAST {len(ratings)} GAMES"
+    output_path = f"{mode}.svg"
+
+    render_dot_chart(
+        ratings=ratings,
+        title=title,
+        color=COLORS[mode],
+        output_path=output_path,
+    )
