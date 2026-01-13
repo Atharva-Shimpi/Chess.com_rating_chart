@@ -1,6 +1,5 @@
 import requests
 import os
-import math
 import numpy as np
 
 import matplotlib
@@ -10,7 +9,7 @@ import matplotlib.pyplot as plt
 # -------------------- FILE SYSTEM --------------------
 os.makedirs("assets/svg", exist_ok=True)
 
-# -------------------- MATPLOTLIB GLOBAL STYLE --------------------
+# -------------------- GLOBAL STYLE --------------------
 BG_COLOR = "#F6F4EF"      # Ivory
 TEXT_COLOR = "#2A2529"    # Charcoal
 
@@ -74,7 +73,8 @@ def get_ratings(time_class):
 
     return ratings[::-1]  # OLDEST → NEWEST
 
-# -------------------- DOTTED FILL RENDER --------------------
+
+# -------------------- DOTTED FILL --------------------
 def plot_dotted_fill(ax, ratings, color):
     x_positions = list(range(len(ratings)))
 
@@ -82,14 +82,18 @@ def plot_dotted_fill(ax, ratings, color):
     max_rating = max(ratings)
     rating_range = max_rating - min_rating
 
-    # --- FLOATING BASE (LOCKED) ---
-    float_base = min_rating
-
-    axis_floor = float_base - rating_range * 0.18
-    axis_ceiling = max_rating + rating_range * 0.15
+    # -------- DESIGN CONTROLS --------
+    FLOAT_GAP_RATIO = 0.20     # space below dots (floating effect)
+    TOP_PADDING_RATIO = 0.15   # space above dots
 
     dot_step = max(6, int(rating_range / 22))
 
+    # -------- FLOATING BASE --------
+    float_base = min_rating
+    axis_floor = float_base - rating_range * FLOAT_GAP_RATIO
+    axis_ceiling = max_rating + rating_range * TOP_PADDING_RATIO
+
+    # -------- DRAW DOTS --------
     for x, rating in zip(x_positions, ratings):
         y_values = list(range(
             float_base,
@@ -105,12 +109,16 @@ def plot_dotted_fill(ax, ratings, color):
             linewidths=0
         )
 
+    # -------- LIMITS --------
     ax.set_ylim(axis_floor, axis_ceiling)
     ax.set_xlim(-2, len(ratings) + 1)
 
-    # -------- Y-TICKS (≤ 6, EVEN) --------
+    # -------- Y TICKS (≤ 6, PERFECTLY ALIGNED) --------
     yticks = np.linspace(float_base, axis_ceiling, 6)
-    ax.set_yticks(yticks.astype(int))
+    yticks = [int(round(y)) for y in yticks]
+    yticks[0] = int(float_base)   # FORCE bottom tick = dot base
+    ax.set_yticks(yticks)
+
 
 # -------------------- AXIS STYLE --------------------
 def style_axes(ax):
@@ -125,6 +133,7 @@ def style_axes(ax):
     ax.tick_params(axis="x", length=4, width=1, pad=6)
 
     ax.grid(False)
+
 
 # -------------------- RENDER --------------------
 for time_class, cfg in TIME_CLASSES.items():
