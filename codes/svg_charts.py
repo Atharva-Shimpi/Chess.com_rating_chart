@@ -1,17 +1,24 @@
-import requests
 import os
+import requests
 import numpy as np
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-# -------------------- FILE SYSTEM --------------------
-os.makedirs("assets/svg", exist_ok=True)
+# ============================================================
+# FILE SYSTEM
+# ============================================================
 
-# -------------------- GLOBAL STYLE --------------------
-BG_COLOR = "#F6F4EF"      # Ivory
-TEXT_COLOR = "#2A2529"    # Charcoal
+OUTPUT_DIR = "assets/svg"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# ============================================================
+# GLOBAL VISUAL THEME
+# ============================================================
+
+BG_COLOR = "#F6F4EF"      # Ivory background
+TEXT_COLOR = "#2A2529"    # Charcoal text / axis color
 
 matplotlib.rcParams.update({
     "figure.facecolor": BG_COLOR,
@@ -25,12 +32,17 @@ matplotlib.rcParams.update({
     "svg.image_inline": False,
 })
 
-# -------------------- CONFIG --------------------
-HEADERS = {"User-Agent": "ChessRatingRefresh/1.0"}
+# ============================================================
+# USER / API CONFIG
+# ============================================================
 
 USERNAME = "Wawa_wuwa"
 RULES = "chess"
 NGAMES = 100
+
+HEADERS = {"User-Agent": "ChessRatingRefresh/1.0"}
+
+ARCHIVES_URL = "https://api.chess.com/pub/player/{user}/games/archives"
 
 TIME_CLASSES = {
     "blitz":  {"color": "#3E2F2A"},  # Umber
@@ -38,10 +50,27 @@ TIME_CLASSES = {
     "bullet": {"color": "#1F2A44"},  # Midnight Blue
 }
 
-ARCHIVES_URL = "https://api.chess.com/pub/player/{user}/games/archives"
+# ============================================================
+# LAYOUT / SPACING CONFIG (SAFE TO TWEAK)
+# ============================================================
 
-# -------------------- DATA FETCH --------------------
+# Horizontal spacing
+X_AXIS_LEFT_PADDING = 2      # distance from y-axis to first dot column
+X_AXIS_RIGHT_PADDING = 1
+
+# Vertical floating behavior
+FLOAT_GAP_RATIO = 0.16       # space between graph base and x-axis
+TOP_PADDING_RATIO = 0.15     # space above tallest dots
+
+# Semantic dot size (rating units, NOT marker pixels)
+DOT_DIAMETER_Y = 6
+
+# ============================================================
+# DATA FETCHING
+# ============================================================
+
 def get_archives():
+    """Return player archive URLs (newest → oldest)."""
     r = requests.get(ARCHIVES_URL.format(user=USERNAME), headers=HEADERS)
     if r.status_code != 200:
         return []
@@ -49,6 +78,7 @@ def get_archives():
 
 
 def get_ratings(time_class):
+    """Fetch last NGAMES ratings for a given time control."""
     games = []
 
     for archive in get_archives():
@@ -68,45 +98,52 @@ def get_ratings(time_class):
 
     ratings = []
     for g in games[:NGAMES]:
-        side = "white" if g["white"]["username"].lower() == USERNAME.lower() else "black"
+        side = (
+            "white"
+            if g["white"]["username"].lower() == USERNAME.lower()
+            else "black"
+        )
         ratings.append(g[side]["rating"])
 
-    return ratings[::-1]  # OLDEST → NEWEST
+    return ratings[::-1]  # oldest → newest
 
 
-# -------------------- DOTTED FILL --------------------
+# ============================================================
+# DOTTED GRAPH RENDERING
+# ============================================================
+
 def plot_dotted_fill(ax, ratings, color):
+    """
+    Draw a vertically-filled dotted graph with perceptual baseline alignment.
+    """
+
     x_positions = list(range(len(ratings)))
 
     min_rating = min(ratings)
     max_rating = max(ratings)
     rating_range = max_rating - min_rating
 
-    # -------- DESIGN CONSTANTS (SAFE TO TUNE) --------
-    DOT_DIAMETER_Y = 6              # semantic vertical unit
-    DOT_STEP_TARGET_ROWS = 22
+    # Vertical resolution of dot rows
+    dot_step = max(6, int(rating_range / 22))
 
-    X_AXIS_PADDING_UNITS = 2.0      # ⬅ distance before first dot column
-    Y_AXIS_PADDING_UNITS = 0.16     # ⬅ distance below floating base (ratio)
+    # --------------------------------------------------------
+    # Floating base (semantic source of truth)
+    # --------------------------------------------------------
 
-    TOP_PADDING_RATIO = 0.15
-
-    dot_step = max(6, int(rating_range / DOT_STEP_TARGET_ROWS))
-
-    # -------- FLOATING BASE (SOURCE OF TRUTH) --------
     float_base = min_rating
+
+    # Visual bottom of dots (scatter points are center-anchored)
     visual_dot_base = float_base - (DOT_DIAMETER_Y / 2)
 
-    axis_floor = visual_dot_base - rating_range * Y_AXIS_PADDING_UNITS
+    axis_floor = visual_dot_base - rating_range * FLOAT_GAP_RATIO
     axis_ceiling = max_rating + rating_range * TOP_PADDING_RATIO
 
-    # -------- DRAW DOTS --------
+    # --------------------------------------------------------
+    # Draw dots
+    # --------------------------------------------------------
+
     for x, rating in zip(x_positions, ratings):
-        y_values = list(range(
-            float_base,
-            rating + dot_step,
-            dot_step
-        ))
+        y_values = range(float_base, rating + dot_step, dot_step)
         ax.scatter(
             [x] * len(y_values),
             y_values,
@@ -116,14 +153,20 @@ def plot_dotted_fill(ax, ratings, color):
             linewidths=0
         )
 
-    # -------- LIMITS --------
+    # --------------------------------------------------------
+    # Axes limits
+    # --------------------------------------------------------
+
     ax.set_ylim(axis_floor, axis_ceiling)
     ax.set_xlim(
-        -X_AXIS_PADDING_UNITS,
-        len(ratings) - 1 + X_AXIS_PADDING_UNITS
+        -X_AXIS_LEFT_PADDING,
+        len(ratings) + X_AXIS_RIGHT_PADDING
     )
 
-    # -------- Y TICKS (PERCEPTUALLY ALIGNED) --------
+    # --------------------------------------------------------
+    # Y ticks (perceptually aligned to dot base)
+    # --------------------------------------------------------
+
     yticks = np.linspace(
         visual_dot_base + DOT_DIAMETER_Y,
         axis_ceiling,
@@ -133,7 +176,10 @@ def plot_dotted_fill(ax, ratings, color):
     ax.set_yticks(yticks)
 
 
-# -------------------- AXIS STYLE --------------------
+# ============================================================
+# AXIS STYLING
+# ============================================================
+
 def style_axes(ax):
     ax.spines["left"].set_visible(False)
     ax.spines["top"].set_visible(False)
@@ -148,15 +194,23 @@ def style_axes(ax):
     ax.grid(False)
 
 
-# -------------------- RENDER --------------------
+# ============================================================
+# RENDER ALL CHARTS
+# ============================================================
+
 for time_class, cfg in TIME_CLASSES.items():
     ratings = get_ratings(time_class)
 
     fig, ax = plt.subplots(figsize=(11, 4.2))
 
     if not ratings:
-        ax.text(0.5, 0.5, "NO DATA AVAILABLE",
-                ha="center", va="center", fontsize=14)
+        ax.text(
+            0.5, 0.5,
+            "NO DATA AVAILABLE",
+            ha="center",
+            va="center",
+            fontsize=14
+        )
         ax.axis("off")
     else:
         plot_dotted_fill(ax, ratings, cfg["color"])
@@ -173,7 +227,7 @@ for time_class, cfg in TIME_CLASSES.items():
 
     plt.tight_layout(pad=2)
     plt.savefig(
-        f"assets/svg/rating-{time_class}.svg",
+        f"{OUTPUT_DIR}/rating-{time_class}.svg",
         format="svg",
         bbox_inches="tight"
     )
