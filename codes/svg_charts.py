@@ -1,58 +1,47 @@
 import requests
-import os
+import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-
-# -------------------- FILE SYSTEM --------------------
-os.makedirs("assets/svg", exist_ok=True)
-
-# -------------------- GLOBAL STYLE --------------------
-BG_COLOR = "#F6F4EF"
-TEXT_COLOR = "#2A2529"
-
-matplotlib.rcParams.update({
-    "figure.facecolor": BG_COLOR,
-    "axes.facecolor": BG_COLOR,
-    "axes.edgecolor": TEXT_COLOR,
-    "axes.labelcolor": TEXT_COLOR,
-    "xtick.color": TEXT_COLOR,
-    "ytick.color": TEXT_COLOR,
-    "text.color": TEXT_COLOR,
-    "svg.fonttype": "path",
-    "svg.image_inline": False,
-})
-
-# -------------------- CONFIG --------------------
-HEADERS = {"User-Agent": "ChessRatingRefresh/1.0"}
+# ---------------- CONFIG ----------------
 
 USERNAME = "Wawa_wuwa"
 RULES = "chess"
-NGAMES = 100
 
 TIME_CLASSES = {
-    "blitz":  {"color": "#3E2F2A"},
-    "rapid":  {"color": "#3A5F3A"},
-    "bullet": {"color": "#1F2A44"},
+    "blitz": {"games": 100, "color": "#5a4a42"},   # Umber
+    "rapid": {"games": 66,  "color": "#4f6b4f"},   # Moss Green
+    "bullet": {"games": 53, "color": "#2f3b52"},   # Midnight Blue
 }
+
+BACKGROUND = "#f7f5ee"   # Ivory
+TEXT_COLOR = "#2A2529"   # Charcoal
+
+# Layout tuning (easy knobs)
+FLOAT_PADDING_RATIO = 0.08      # space below dots
+TOP_PADDING_RATIO   = 0.10      # headroom above dots
+Y_LABEL_OFFSET_RATIO = 0.04     # keeps labels visually above dot base
+LEFT_GRAPH_PADDING = 0.6        # x-space before first column of dots
+
+MAX_Y_TICKS = 6
+
+matplotlib.rcParams["svg.image_inline"] = False
+matplotlib.rcParams["svg.fonttype"] = "path"
 
 ARCHIVES_URL = "https://api.chess.com/pub/player/{user}/games/archives"
 
-# -------------------- DATA FETCH --------------------
+# ---------------- DATA ----------------
+
 def get_archives():
-    r = requests.get(ARCHIVES_URL.format(user=USERNAME), headers=HEADERS)
+    r = requests.get(ARCHIVES_URL.format(user=USERNAME))
     if r.status_code != 200:
         return []
     return r.json().get("archives", [])[::-1]
 
-
-def get_ratings(time_class):
+def get_ratings(time_class, n_games):
     games = []
-
     for archive in get_archives():
-        r = requests.get(archive, headers=HEADERS)
+        r = requests.get(archive)
         if r.status_code != 200:
             continue
 
@@ -63,107 +52,92 @@ def get_ratings(time_class):
         ][::-1]
 
         games.extend(filtered)
-        if len(games) >= NGAMES:
+        if len(games) >= n_games:
             break
 
     ratings = []
-    for g in games[:NGAMES]:
+    for g in games[:n_games]:
         side = "white" if g["white"]["username"].lower() == USERNAME.lower() else "black"
         ratings.append(g[side]["rating"])
 
-    return ratings[::-1]
+    return ratings
 
+# ---------------- PLOTTING ----------------
 
-# -------------------- DOTTED FILL --------------------
-def plot_dotted_fill(ax, ratings, color):
-    x_positions = list(range(len(ratings)))
-
+def plot_dotted_columns(ax, ratings, color):
     min_rating = min(ratings)
     max_rating = max(ratings)
     rating_range = max_rating - min_rating
 
-    # -------- DESIGN CONTROLS --------
-    FLOAT_GAP_RATIO = 0.20
-    TOP_PADDING_RATIO = 0.15
+    float_padding = rating_range * FLOAT_PADDING_RATIO
+    top_padding   = rating_range * TOP_PADDING_RATIO
 
-    LEFT_GRAPH_PADDING = 2
-    RIGHT_GRAPH_PADDING = 1
+    float_base = min_rating - float_padding
+    ceiling    = max_rating + top_padding
 
     dot_step = max(6, int(rating_range / 22))
 
-    # -------- FLOATING BASE --------
-    float_base = min_rating
-    axis_floor = float_base - rating_range * FLOAT_GAP_RATIO
-    axis_ceiling = max_rating + rating_range * TOP_PADDING_RATIO
-
-    # -------- DRAW DOTS --------
-    for x, rating in zip(x_positions, ratings):
-        y_values = list(range(
-            float_base,
-            rating + dot_step,
-            dot_step
-        ))
+    # draw dots
+    for x, r in enumerate(ratings):
+        y_vals = np.arange(float_base, r + 0.01, dot_step)
         ax.scatter(
-            [x] * len(y_values),
-            y_values,
-            s=18,
+            [x + LEFT_GRAPH_PADDING] * len(y_vals),
+            y_vals,
+            s=10,
             color=color,
-            alpha=0.95,
             linewidths=0
         )
 
-    # -------- LIMITS --------
-    ax.set_ylim(axis_floor, axis_ceiling)
-    ax.set_xlim(-LEFT_GRAPH_PADDING, len(ratings) + RIGHT_GRAPH_PADDING)
+    # axis limits
+    ax.set_xlim(LEFT_GRAPH_PADDING - 0.4, len(ratings) + LEFT_GRAPH_PADDING)
+    ax.set_ylim(float_base, ceiling)
 
-    # -------- Y TICKS (VISUALLY CORRECT) --------
-    yticks = np.linspace(float_base + dot_step, axis_ceiling, 6)
-    yticks = [int(round(y)) for y in yticks]
-    ax.set_yticks(yticks)
+    # ---------- Y AXIS (editorial separation) ----------
+    # Labels live ABOVE dot base — not on it
+    y_label_start = float_base + rating_range * Y_LABEL_OFFSET_RATIO
+    y_ticks = np.linspace(y_label_start, ceiling, MAX_Y_TICKS)
 
+    ax.set_yticks(y_ticks)
+    ax.set_yticklabels([f"{int(t)}" for t in y_ticks], color=TEXT_COLOR)
 
-# -------------------- AXIS STYLE --------------------
-def style_axes(ax):
-    ax.spines["left"].set_visible(False)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
+    # ---------- X AXIS ----------
+    x_ticks = np.linspace(LEFT_GRAPH_PADDING, len(ratings), 6)
+    ax.set_xticks(x_ticks)
+    ax.set_xticklabels([str(int(t - LEFT_GRAPH_PADDING)) for t in x_ticks], color=TEXT_COLOR)
 
-    ax.spines["bottom"].set_linewidth(1.2)
-    ax.spines["bottom"].set_alpha(0.4)
-
-    ax.tick_params(axis="y", length=0)
-    ax.tick_params(axis="x", length=4, width=1, pad=6)
-
+    # ---------- CLEANUP ----------
     ax.grid(False)
 
+    for spine in ["top", "right", "left"]:
+        ax.spines[spine].set_visible(False)
 
-# -------------------- RENDER --------------------
+    ax.spines["bottom"].set_color("#999999")
+    ax.spines["bottom"].set_linewidth(1)
+
+    ax.tick_params(axis="y", length=0)
+    ax.tick_params(axis="x", colors=TEXT_COLOR)
+
+# ---------------- MAIN ----------------
+
 for time_class, cfg in TIME_CLASSES.items():
-    ratings = get_ratings(time_class)
-
-    fig, ax = plt.subplots(figsize=(11, 4.2))
-
+    ratings = get_ratings(time_class, cfg["games"])
     if not ratings:
-        ax.text(0.5, 0.5, "NO DATA AVAILABLE",
-                ha="center", va="center", fontsize=14)
-        ax.axis("off")
-    else:
-        plot_dotted_fill(ax, ratings, cfg["color"])
-        style_axes(ax)
+        continue
 
-        ax.text(
-            0.0, 1.06,
-            f"{time_class.upper()} · LAST {len(ratings)} GAMES",
-            transform=ax.transAxes,
-            fontsize=13,
-            ha="left",
-            va="bottom"
-        )
+    fig, ax = plt.subplots(figsize=(10, 4))
+    fig.patch.set_facecolor(BACKGROUND)
+    ax.set_facecolor(BACKGROUND)
 
-    plt.tight_layout(pad=2)
-    plt.savefig(
-        f"assets/svg/rating-{time_class}.svg",
-        format="svg",
-        bbox_inches="tight"
+    plot_dotted_columns(ax, ratings, cfg["color"])
+
+    ax.set_title(
+        f"{time_class.upper()} · LAST {len(ratings)} GAMES",
+        loc="left",
+        fontsize=11,
+        color=TEXT_COLOR,
+        pad=12
     )
+
+    plt.tight_layout()
+    plt.savefig(f"rating-{time_class}.svg")
     plt.close()
