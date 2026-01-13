@@ -82,18 +82,22 @@ def plot_dotted_fill(ax, ratings, color):
     max_rating = max(ratings)
     rating_range = max_rating - min_rating
 
-    # -------- DESIGN CONSTANTS --------
-    DOT_DIAMETER_Y = 6        # fixed semantic unit (NOT tied to marker size)
-    FLOAT_GAP_RATIO = 0.16
+    # -------- DESIGN CONSTANTS (SAFE TO TUNE) --------
+    DOT_DIAMETER_Y = 6              # semantic vertical unit
+    DOT_STEP_TARGET_ROWS = 22
+
+    X_AXIS_PADDING_UNITS = 2.0      # ⬅ distance before first dot column
+    Y_AXIS_PADDING_UNITS = 0.16     # ⬅ distance below floating base (ratio)
+
     TOP_PADDING_RATIO = 0.15
 
-    dot_step = max(6, int(rating_range / 22))
+    dot_step = max(6, int(rating_range / DOT_STEP_TARGET_ROWS))
 
     # -------- FLOATING BASE (SOURCE OF TRUTH) --------
     float_base = min_rating
     visual_dot_base = float_base - (DOT_DIAMETER_Y / 2)
 
-    axis_floor = visual_dot_base - rating_range * FLOAT_GAP_RATIO
+    axis_floor = visual_dot_base - rating_range * Y_AXIS_PADDING_UNITS
     axis_ceiling = max_rating + rating_range * TOP_PADDING_RATIO
 
     # -------- DRAW DOTS --------
@@ -114,7 +118,10 @@ def plot_dotted_fill(ax, ratings, color):
 
     # -------- LIMITS --------
     ax.set_ylim(axis_floor, axis_ceiling)
-    ax.set_xlim(-2, len(ratings) + 1)
+    ax.set_xlim(
+        -X_AXIS_PADDING_UNITS,
+        len(ratings) - 1 + X_AXIS_PADDING_UNITS
+    )
 
     # -------- Y TICKS (PERCEPTUALLY ALIGNED) --------
     yticks = np.linspace(
