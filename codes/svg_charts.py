@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 os.makedirs("assets/svg", exist_ok=True)
 
 # -------------------- GLOBAL STYLE --------------------
-BG_COLOR = "#F6F4EF"      # Ivory
-TEXT_COLOR = "#2A2529"    # Charcoal
+BG_COLOR = "#F6F4EF"
+TEXT_COLOR = "#2A2529"
 
 matplotlib.rcParams.update({
     "figure.facecolor": BG_COLOR,
@@ -33,9 +33,9 @@ RULES = "chess"
 NGAMES = 100
 
 TIME_CLASSES = {
-    "blitz":  {"color": "#3E2F2A"},  # Umber
-    "rapid":  {"color": "#3A5F3A"},  # Moss Green
-    "bullet": {"color": "#1F2A44"},  # Midnight Blue
+    "blitz":  {"color": "#3E2F2A"},
+    "rapid":  {"color": "#3A5F3A"},
+    "bullet": {"color": "#1F2A44"},
 }
 
 ARCHIVES_URL = "https://api.chess.com/pub/player/{user}/games/archives"
@@ -71,7 +71,7 @@ def get_ratings(time_class):
         side = "white" if g["white"]["username"].lower() == USERNAME.lower() else "black"
         ratings.append(g[side]["rating"])
 
-    return ratings[::-1]  # OLDEST → NEWEST
+    return ratings[::-1]
 
 
 # -------------------- DOTTED FILL --------------------
@@ -83,8 +83,11 @@ def plot_dotted_fill(ax, ratings, color):
     rating_range = max_rating - min_rating
 
     # -------- DESIGN CONTROLS --------
-    FLOAT_GAP_RATIO = 0.16     # space below dots (floating effect)
-    TOP_PADDING_RATIO = 0.15   # space above dots
+    FLOAT_GAP_RATIO = 0.20
+    TOP_PADDING_RATIO = 0.15
+
+    LEFT_GRAPH_PADDING = 2
+    RIGHT_GRAPH_PADDING = 1
 
     dot_step = max(6, int(rating_range / 22))
 
@@ -111,12 +114,11 @@ def plot_dotted_fill(ax, ratings, color):
 
     # -------- LIMITS --------
     ax.set_ylim(axis_floor, axis_ceiling)
-    ax.set_xlim(-2, len(ratings) + 1)
+    ax.set_xlim(-LEFT_GRAPH_PADDING, len(ratings) + RIGHT_GRAPH_PADDING)
 
-    # -------- Y TICKS (≤ 6, PERFECTLY ALIGNED) --------
-    yticks = np.linspace(float_base, axis_ceiling, 6)
+    # -------- Y TICKS (VISUALLY CORRECT) --------
+    yticks = np.linspace(float_base + dot_step, axis_ceiling, 6)
     yticks = [int(round(y)) for y in yticks]
-    yticks[0] = int(float_base)   # FORCE bottom tick = dot base
     ax.set_yticks(yticks)
 
 
