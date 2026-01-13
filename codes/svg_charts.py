@@ -84,7 +84,7 @@ def plot_dotted_fill(ax, ratings, color):
 
     # -------- DESIGN CONTROLS --------
     FLOAT_GAP_RATIO = 0.16     # space below dots (floating effect)
-    TOP_PADDING_RATIO = 0.60   # space above dots
+    TOP_PADDING_RATIO = 0.15   # space above dots
 
     dot_step = max(6, int(rating_range / 22))
 
