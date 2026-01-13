@@ -91,7 +91,7 @@ def plot_dotted_fill(ax, ratings, color):
 
     # -------- FLOATING BASE (SOURCE OF TRUTH) --------
     float_base = min_rating
-    visual_dot_base = float_base - DOT_DIAMETER_Y
+    visual_dot_base = float_base - (DOT_DIAMETER_Y / 2)
 
     axis_floor = visual_dot_base - rating_range * FLOAT_GAP_RATIO
     axis_ceiling = max_rating + rating_range * TOP_PADDING_RATIO
