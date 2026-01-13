@@ -1,187 +1,174 @@
 import requests
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from datetime import datetime
 
-# ---------------------------
-# SVG safety
-# ---------------------------
-matplotlib.rcParams["svg.image_inline"] = False
-matplotlib.rcParams["svg.fonttype"] = "path"
-
-# ---------------------------
+# =========================
 # USER CONFIG
-# ---------------------------
+# =========================
 USERNAME = "Wawa_wuwa"
 RULES = "chess"
 
 TIME_CLASSES = {
-    "blitz":  {"games": 100, "color": "#5A4A42"},  # Umber
-    "rapid":  {"games": 66,  "color": "#556B4E"},  # Moss Green
-    "bullet": {"games": 53,  "color": "#2F3E55"},  # Midnight Blue
+    "blitz":  {"games": 100, "color": "#5B4636"},  # Umber
+    "rapid":  {"games": 66,  "color": "#4F6B4F"},  # Moss Green
+    "bullet": {"games": 53,  "color": "#2E3A4F"},  # Midnight Blue
 }
 
-# ---------------------------
-# VISUAL CONSTANTS (DESIGN TUNING)
-# ---------------------------
-DOT_STEP = 6                 # vertical spacing between dot rows (rating units)
-DOT_SIZE = 12                # scatter size (visual only)
-DOT_DIAMETER_Y = DOT_STEP    # semantic diameter in *rating units* (DO NOT tie to DOT_SIZE)
+# =========================
+# DESIGN CONSTANTS (EDIT SAFELY)
+# =========================
+DOT_SIZE = 8                  # scatter size (visual only)
+DOT_STEP = 8                  # vertical spacing between dot rows (rating units)
+DOT_DIAMETER_Y = 8            # ❗ hard-coded semantic dot height (rating units)
 
-FLOAT_GAP_RATIO = 0.12       # space between x-axis and dot base
-TOP_PADDING_RATIO = 0.10     # breathing room at top
-
-X_PADDING_RATIO = 0.04       # distance between y-axis and first dot column
-X_RIGHT_PADDING_RATIO = 0.02
+FLOAT_GAP_RATIO = 0.10        # how much empty space below dots
+TOP_PADDING_RATIO = 0.12      # headroom above highest dot
 
 Y_TICKS_COUNT = 6
 X_TICKS_COUNT = 6
 
-FIGSIZE = (10, 4)
-BG_COLOR = "#F7F4EC"         # Ivory
-TEXT_COLOR = "#2A2529"       # Charcoal
-AXIS_COLOR = "#8A8A8A"
+BG_COLOR = "#F7F4EE"          # Ivory
+TEXT_COLOR = "#2A2529"        # Charcoal
 
 ARCHIVES_URL = "https://api.chess.com/pub/player/{user}/games/archives"
 
 
-# ---------------------------
+# =========================
 # DATA FETCHING
-# ---------------------------
+# =========================
 def get_archives():
-    r = requests.get(ARCHIVES_URL.format(user=USERNAME))
-    if r.status_code != 200:
+    resp = requests.get(ARCHIVES_URL.format(user=USERNAME))
+    if resp.status_code != 200:
         return []
-    return r.json().get("archives", [])[::-1]
+    return resp.json().get("archives", [])[::-1]
 
 
-def get_ratings(time_class, limit):
+def get_ratings(time_class, ngames):
     games = []
 
     for archive in get_archives():
-        r = requests.get(archive)
-        if r.status_code != 200:
-            continue
+        data = requests.get(archive).json().get("games", [])
 
-        data = r.json().get("games", [])
         filtered = [
             g for g in data
             if g.get("time_class") == time_class and g.get("rules") == RULES
         ][::-1]
 
         games.extend(filtered)
-        if len(games) >= limit:
+        if len(games) >= ngames:
             break
 
     ratings = []
-    for g in games[:limit]:
+    for g in games[:ngames]:
         side = "white" if g["white"]["username"].lower() == USERNAME.lower() else "black"
         ratings.append(g[side]["rating"])
 
     return ratings
 
 
-# ---------------------------
-# DOT COLUMN DRAWING
-# ---------------------------
-def draw_dot_columns(ax, ratings, color, float_base):
-    xs, ys = [], []
-
-    for i, rating in enumerate(ratings, start=1):
-        for y in range(int(float_base), int(rating) + 1, DOT_STEP):
-            xs.append(i)
-            ys.append(y)
-
-    ax.scatter(xs, ys, s=DOT_SIZE, color=color, linewidths=0)
-
-
-# ---------------------------
-# MAIN RENDER LOOP
-# ---------------------------
-for time_class, cfg in TIME_CLASSES.items():
-    ratings = get_ratings(time_class, cfg["games"])
-    if not ratings:
-        continue
-
+# =========================
+# PLOTTING
+# =========================
+def plot_dotted_chart(ratings, title, color, ngames):
+    ratings = ratings[:ngames]
     min_rating = min(ratings)
     max_rating = max(ratings)
     rating_range = max_rating - min_rating
 
-    # ---------------------------
-    # FLOATING BASE (CANONICAL)
-    # ---------------------------
-    float_base = min_rating
+    # -------------------------
+    # FLOATING BASE LOGIC
+    # -------------------------
+    float_base = min_rating                      # mathematical first dot center
+    visual_dot_base = float_base - DOT_DIAMETER_Y / 2
 
-    # visual dot base (what the eye sees)
-    visual_dot_base = float_base - (DOT_DIAMETER_Y / 2)
-
-    # axis floor (x-axis location)
     axis_floor = visual_dot_base - rating_range * FLOAT_GAP_RATIO
-
     axis_ceiling = max_rating + rating_range * TOP_PADDING_RATIO
 
-    # ---------------------------
+    # -------------------------
+    # BUILD DOTS
+    # -------------------------
+    xs, ys = [], []
+    for i, r in enumerate(ratings, start=1):
+        for y in range(int(float_base), int(r) + DOT_STEP, DOT_STEP):
+            xs.append(i)
+            ys.append(y)
+
+    # -------------------------
     # FIGURE
-    # ---------------------------
-    fig, ax = plt.subplots(figsize=FIGSIZE)
+    # -------------------------
+    fig, ax = plt.subplots(figsize=(10.5, 3.8))
     fig.patch.set_facecolor(BG_COLOR)
     ax.set_facecolor(BG_COLOR)
 
-    draw_dot_columns(ax, ratings, cfg["color"], float_base)
+    ax.scatter(xs, ys, s=DOT_SIZE, color=color, linewidths=0)
 
-    # ---------------------------
-    # LIMITS
-    # ---------------------------
-    x_min = 1 - cfg["games"] * X_PADDING_RATIO
-    x_max = cfg["games"] + cfg["games"] * X_RIGHT_PADDING_RATIO
-
-    ax.set_xlim(x_min, x_max)
+    # -------------------------
+    # AXIS LIMITS
+    # -------------------------
+    ax.set_xlim(0, ngames + 1)
     ax.set_ylim(axis_floor, axis_ceiling)
 
-    # ---------------------------
-    # Y TICKS (≤ 6, BOTTOM ALIGNED CORRECTLY)
-    # ---------------------------
-    yticks = np.linspace(float_base, axis_ceiling, Y_TICKS_COUNT)
+    # -------------------------
+    # X TICKS
+    # -------------------------
+    ax.set_xticks(np.linspace(1, ngames, X_TICKS_COUNT).astype(int))
+    ax.tick_params(axis="x", colors=TEXT_COLOR, labelsize=8)
 
-    # 🔒 CRITICAL FIX:
-    # First Y-tick sits exactly ONE DOT DIAMETER ABOVE VISUAL DOT BASE
-    yticks[0] = visual_dot_base + DOT_DIAMETER_Y
+    # -------------------------
+    # Y TICKS (CRITICAL FIX)
+    # -------------------------
+    yticks = np.linspace(
+        visual_dot_base + DOT_DIAMETER_Y,  # ✅ one dot ABOVE dot base
+        axis_ceiling,
+        Y_TICKS_COUNT
+    )
+    ax.set_yticks(yticks.astype(int))
+    ax.tick_params(axis="y", colors=TEXT_COLOR, labelsize=8, length=0)
 
-    ax.set_yticks(yticks)
-    ax.set_yticklabels([str(int(y)) for y in yticks], color=TEXT_COLOR)
-
-    # ---------------------------
-    # X TICKS (6 EVEN)
-    # ---------------------------
-    xticks = np.linspace(1, cfg["games"], X_TICKS_COUNT)
-    ax.set_xticks(xticks)
-    ax.set_xticklabels([str(int(x)) for x in xticks], color=TEXT_COLOR)
-
-    # ---------------------------
-    # AXIS STYLING
-    # ---------------------------
+    # -------------------------
+    # CLEAN LOOK
+    # -------------------------
+    ax.grid(False)
     for spine in ["top", "right", "left"]:
         ax.spines[spine].set_visible(False)
 
-    ax.spines["bottom"].set_color(AXIS_COLOR)
-    ax.tick_params(axis="both", length=3, colors=TEXT_COLOR)
+    ax.spines["bottom"].set_color("#9A9A9A")
+    ax.spines["bottom"].set_linewidth(1)
 
-    ax.grid(False)
-
-    # ---------------------------
+    # -------------------------
     # TITLE
-    # ---------------------------
+    # -------------------------
     ax.text(
-        0.01, 0.98,
-        f"{time_class.upper()} · LAST {cfg['games']} GAMES",
+        0.01, 0.96,
+        title.upper(),
         transform=ax.transAxes,
         ha="left",
         va="top",
-        color=TEXT_COLOR,
-        fontsize=10,
-        weight="medium"
+        fontsize=9,
+        color=TEXT_COLOR
     )
 
     plt.tight_layout()
-    plt.savefig(f"rating-{time_class}.svg", format="svg", dpi=300)
+    plt.savefig(f"rating-{title.split()[0].lower()}.svg")
     plt.close()
+
+
+# =========================
+# RUN
+# =========================
+for time_class, cfg in TIME_CLASSES.items():
+    ratings = get_ratings(time_class, cfg["games"])
+    if ratings:
+        plot_dotted_chart(
+            ratings,
+            f"{time_class} · last {cfg['games']} games",
+            cfg["color"],
+            cfg["games"]
+        )
+
+
+# axis_floor        → invisible padding below everything
+# visual_dot_base   → where dots visually touch
+# float_base        → first dot row center
+# first_y_tick      → one dot diameter ABOVE visual_dot_base
