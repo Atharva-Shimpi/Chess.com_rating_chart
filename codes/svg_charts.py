@@ -69,10 +69,10 @@ DOT_DIAMETER_Y = 6
 # EDITORIAL MARGINS (PHASE 5 — EASY TO CONFIGURE)
 # ------------------------------------------------------------
 
-LEFT_MARGIN   = 0.10
-RIGHT_MARGIN  = 0.10
-BOTTOM_MARGIN = 0.14   # slightly reduced (do NOT affect dot–axis gap)
-TOP_MARGIN    = 0.80   # intentionally larger (future header space)
+LEFT_MARGIN   = 0.06
+RIGHT_MARGIN  = 0.06
+BOTTOM_MARGIN = 0.08   # slightly reduced (do NOT affect dot–axis gap)
+TOP_MARGIN    = 0.86   # intentionally larger (future header space)
 
 # ============================================================
 # DATA FETCHING
