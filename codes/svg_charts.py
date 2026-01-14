@@ -65,6 +65,15 @@ TOP_PADDING_RATIO = 0.15
 # Semantic dot size in rating-units (NOT marker size)
 DOT_DIAMETER_Y = 6
 
+# ------------------------------------------------------------
+# EDITORIAL MARGINS (PHASE 5 — EASY TO CONFIGURE)
+# ------------------------------------------------------------
+
+LEFT_MARGIN   = 0.10
+RIGHT_MARGIN  = 0.10
+BOTTOM_MARGIN = 0.14   # slightly reduced (do NOT affect dot–axis gap)
+TOP_MARGIN    = 0.80   # intentionally larger (future header space)
+
 # ============================================================
 # DATA FETCHING
 # ============================================================
@@ -195,13 +204,13 @@ def style_axes(ax):
 
 
 # ============================================================
-# RENDER ALL CHARTS (PHASE 5 LAYOUT)
+# RENDER ALL CHARTS (PHASE 5 — EDITORIAL LAYOUT)
 # ============================================================
 
 for time_class, cfg in TIME_CLASSES.items():
     ratings = get_ratings(time_class)
 
-    # Taller canvas for editorial spacing + future header
+    # Taller canvas for museum-like breathing room
     fig, ax = plt.subplots(figsize=(12.5, 5.8))
 
     if not ratings:
@@ -217,7 +226,7 @@ for time_class, cfg in TIME_CLASSES.items():
         plot_dotted_fill(ax, ratings, cfg["color"])
         style_axes(ax)
 
-        # Temporary title (will be replaced by Phase 6 header)
+        # Temporary title (will be replaced in Phase 6)
         ax.text(
             0.0, 1.08,
             f"{time_class.upper()} · LAST {len(ratings)} GAMES",
@@ -228,14 +237,14 @@ for time_class, cfg in TIME_CLASSES.items():
         )
 
     # --------------------------------------------------------
-    # Editorial margins (negative space tuning)
+    # Editorial margins (fully configurable)
     # --------------------------------------------------------
 
     fig.subplots_adjust(
-        left=0.09,
-        right=0.97,
-        bottom=0.16,
-        top=0.78
+        left=LEFT_MARGIN,
+        right=1 - RIGHT_MARGIN,
+        bottom=BOTTOM_MARGIN,
+        top=TOP_MARGIN
     )
 
     plt.savefig(
