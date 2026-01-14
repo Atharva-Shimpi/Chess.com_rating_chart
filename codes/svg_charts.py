@@ -18,7 +18,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # ============================================================
 
 BG_COLOR = "#F6F4EF"      # Ivory background
-TEXT_COLOR = "#2A2529"    # Charcoal text / axis color
+TEXT_COLOR = "#2A2529"   # Charcoal
 
 matplotlib.rcParams.update({
     "figure.facecolor": BG_COLOR,
@@ -54,15 +54,15 @@ TIME_CLASSES = {
 # LAYOUT / SPACING CONFIG (SAFE TO TWEAK)
 # ============================================================
 
-# Horizontal spacing
-X_AXIS_LEFT_PADDING = 2      # distance from y-axis to first dot column
-X_AXIS_RIGHT_PADDING = 1
+# Horizontal spacing (axis → dots)
+X_AXIS_LEFT_PADDING = 2.0
+X_AXIS_RIGHT_PADDING = 1.2
 
 # Vertical floating behavior
-FLOAT_GAP_RATIO = 0.16       # space between graph base and x-axis
-TOP_PADDING_RATIO = 0.15     # space above tallest dots
+FLOAT_GAP_RATIO = 0.16
+TOP_PADDING_RATIO = 0.15
 
-# Semantic dot size (rating units, NOT marker pixels)
+# Semantic dot size in rating-units (NOT marker size)
 DOT_DIAMETER_Y = 6
 
 # ============================================================
@@ -70,7 +70,7 @@ DOT_DIAMETER_Y = 6
 # ============================================================
 
 def get_archives():
-    """Return player archive URLs (newest → oldest)."""
+    """Return archive URLs (newest → oldest)."""
     r = requests.get(ARCHIVES_URL.format(user=USERNAME), headers=HEADERS)
     if r.status_code != 200:
         return []
@@ -78,7 +78,7 @@ def get_archives():
 
 
 def get_ratings(time_class):
-    """Fetch last NGAMES ratings for a given time control."""
+    """Fetch last NGAMES ratings for a time class."""
     games = []
 
     for archive in get_archives():
@@ -114,7 +114,7 @@ def get_ratings(time_class):
 
 def plot_dotted_fill(ax, ratings, color):
     """
-    Draw a vertically-filled dotted graph with perceptual baseline alignment.
+    Draw vertically-filled dotted graph with perceptual baseline alignment.
     """
 
     x_positions = list(range(len(ratings)))
@@ -123,16 +123,16 @@ def plot_dotted_fill(ax, ratings, color):
     max_rating = max(ratings)
     rating_range = max_rating - min_rating
 
-    # Vertical resolution of dot rows
+    # Vertical dot resolution
     dot_step = max(6, int(rating_range / 22))
 
     # --------------------------------------------------------
-    # Floating base (semantic source of truth)
+    # Floating base (semantic truth)
     # --------------------------------------------------------
 
     float_base = min_rating
 
-    # Visual bottom of dots (scatter points are center-anchored)
+    # Visual bottom of dot row (scatter is center-anchored)
     visual_dot_base = float_base - (DOT_DIAMETER_Y / 2)
 
     axis_floor = visual_dot_base - rating_range * FLOAT_GAP_RATIO
@@ -154,7 +154,7 @@ def plot_dotted_fill(ax, ratings, color):
         )
 
     # --------------------------------------------------------
-    # Axes limits
+    # Axis limits
     # --------------------------------------------------------
 
     ax.set_ylim(axis_floor, axis_ceiling)
@@ -164,7 +164,7 @@ def plot_dotted_fill(ax, ratings, color):
     )
 
     # --------------------------------------------------------
-    # Y ticks (perceptually aligned to dot base)
+    # Y-axis ticks (aligned above dot base)
     # --------------------------------------------------------
 
     yticks = np.linspace(
@@ -195,13 +195,14 @@ def style_axes(ax):
 
 
 # ============================================================
-# RENDER ALL CHARTS
+# RENDER ALL CHARTS (PHASE 5 LAYOUT)
 # ============================================================
 
 for time_class, cfg in TIME_CLASSES.items():
     ratings = get_ratings(time_class)
 
-    fig, ax = plt.subplots(figsize=(11, 4.2))
+    # Taller canvas for editorial spacing + future header
+    fig, ax = plt.subplots(figsize=(12.5, 5.8))
 
     if not ratings:
         ax.text(
@@ -216,8 +217,9 @@ for time_class, cfg in TIME_CLASSES.items():
         plot_dotted_fill(ax, ratings, cfg["color"])
         style_axes(ax)
 
+        # Temporary title (will be replaced by Phase 6 header)
         ax.text(
-            0.0, 1.06,
+            0.0, 1.08,
             f"{time_class.upper()} · LAST {len(ratings)} GAMES",
             transform=ax.transAxes,
             fontsize=13,
@@ -225,10 +227,19 @@ for time_class, cfg in TIME_CLASSES.items():
             va="bottom"
         )
 
-    plt.tight_layout(pad=2)
+    # --------------------------------------------------------
+    # Editorial margins (negative space tuning)
+    # --------------------------------------------------------
+
+    fig.subplots_adjust(
+        left=0.09,
+        right=0.97,
+        bottom=0.16,
+        top=0.78
+    )
+
     plt.savefig(
         f"{OUTPUT_DIR}/rating-{time_class}.svg",
-        format="svg",
-        bbox_inches="tight"
+        format="svg"
     )
     plt.close()
