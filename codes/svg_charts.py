@@ -70,7 +70,7 @@ DOT_DIAMETER_Y = 6
 # ============================================================
 
 def get_archives():
-    """Return player archive URLs (newest â†’ oldest)."""
+    """Return player archive URLs (newest → oldest)."""
     r = requests.get(ARCHIVES_URL.format(user=USERNAME), headers=HEADERS)
     if r.status_code != 200:
         return []
@@ -105,7 +105,7 @@ def get_ratings(time_class):
         )
         ratings.append(g[side]["rating"])
 
-    return ratings[::-1]  # oldest â†’ newest
+    return ratings[::-1]  # oldest → newest
 
 
 # ============================================================
@@ -218,7 +218,7 @@ for time_class, cfg in TIME_CLASSES.items():
 
         ax.text(
             0.0, 1.06,
-            f"{time_class.upper()} Â· LAST {len(ratings)} GAMES",
+            f"{time_class.upper()} · LAST {len(ratings)} GAMES",
             transform=ax.transAxes,
             fontsize=13,
             ha="left",
