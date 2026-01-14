@@ -1,245 +1,123 @@
-import os
-import requests
+import matplotlib.pyplot as plt
 import numpy as np
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
-# ============================================================
-# FILE SYSTEM
-# ============================================================
-
-OUTPUT_DIR = "assets/svg"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-# ============================================================
-# GLOBAL VISUAL THEME
-# ============================================================
-
-BG_COLOR = "#F6F4EF"      # Ivory background
-TEXT_COLOR = "#2A2529"   # Charcoal
-
-matplotlib.rcParams.update({
-    "figure.facecolor": BG_COLOR,
-    "axes.facecolor": BG_COLOR,
-    "axes.edgecolor": TEXT_COLOR,
-    "axes.labelcolor": TEXT_COLOR,
-    "xtick.color": TEXT_COLOR,
-    "ytick.color": TEXT_COLOR,
-    "text.color": TEXT_COLOR,
-    "svg.fonttype": "path",
-    "svg.image_inline": False,
+# =========================
+# GLOBAL STYLE
+# =========================
+plt.rcParams.update({
+    "figure.facecolor": "#0f1115",
+    "axes.facecolor": "#f6f4ec",
+    "font.family": "DejaVu Sans",
 })
 
-# ============================================================
-# USER / API CONFIG
-# ============================================================
 
-USERNAME = "Wawa_wuwa"
-RULES = "chess"
-NGAMES = 100
-
-HEADERS = {"User-Agent": "ChessRatingRefresh/1.0"}
-
-ARCHIVES_URL = "https://api.chess.com/pub/player/{user}/games/archives"
-
-TIME_CLASSES = {
-    "blitz":  {"color": "#3E2F2A"},  # Umber
-    "rapid":  {"color": "#3A5F3A"},  # Moss Green
-    "bullet": {"color": "#1F2A44"},  # Midnight Blue
-}
-
-# ============================================================
-# LAYOUT / SPACING CONFIG (SAFE TO TWEAK)
-# ============================================================
-
-# Horizontal spacing (axis → dots)
-X_AXIS_LEFT_PADDING = 2.0
-X_AXIS_RIGHT_PADDING = 1.2
-
-# Vertical floating behavior
-FLOAT_GAP_RATIO = 0.16
-TOP_PADDING_RATIO = 0.15
-
-# Semantic dot size in rating-units (NOT marker size)
-DOT_DIAMETER_Y = 6
-
-# ============================================================
-# DATA FETCHING
-# ============================================================
-
-def get_archives():
-    """Return archive URLs (newest → oldest)."""
-    r = requests.get(ARCHIVES_URL.format(user=USERNAME), headers=HEADERS)
-    if r.status_code != 200:
-        return []
-    return r.json().get("archives", [])[::-1]
+# =========================
+# DOT CONFIGURATION
+# =========================
+DOT_SIZE = 6
+DOT_STEP = 6
+DOT_DIAMETER_Y = 6  # semantic unit, NOT radius-based
 
 
-def get_ratings(time_class):
-    """Fetch last NGAMES ratings for a time class."""
-    games = []
-
-    for archive in get_archives():
-        r = requests.get(archive, headers=HEADERS)
-        if r.status_code != 200:
-            continue
-
-        data = r.json().get("games", [])
-        filtered = [
-            g for g in data
-            if g.get("time_class") == time_class and g.get("rules") == RULES
-        ][::-1]
-
-        games.extend(filtered)
-        if len(games) >= NGAMES:
-            break
-
-    ratings = []
-    for g in games[:NGAMES]:
-        side = (
-            "white"
-            if g["white"]["username"].lower() == USERNAME.lower()
-            else "black"
-        )
-        ratings.append(g[side]["rating"])
-
-    return ratings[::-1]  # oldest → newest
+# =========================
+# FLOATING GRAPH CONFIG
+# =========================
+FLOAT_GAP_RATIO = 0.10   # invisible space below dots
+X_AXIS_GAP_RATIO = 0.08 # distance between x-axis and dot base
 
 
-# ============================================================
-# DOTTED GRAPH RENDERING
-# ============================================================
+# =========================
+# AXIS / TICKS
+# =========================
+Y_TICKS_COUNT = 6
+X_TICKS_COUNT = 6
 
-def plot_dotted_fill(ax, ratings, color):
-    """
-    Draw vertically-filled dotted graph with perceptual baseline alignment.
-    """
 
-    x_positions = list(range(len(ratings)))
+# =========================
+# LAYOUT / MARGINS (PHASE 5)
+# =========================
+LEFT_MARGIN   = 0.08
+RIGHT_MARGIN  = 0.08
+TOP_MARGIN    = 0.16   # intentionally larger (future header)
+BOTTOM_MARGIN = 0.10   # reduced slightly
 
+
+# =========================
+# CHART RENDER FUNCTION
+# =========================
+def render_chart(ax, ratings, title, color):
+    games = np.arange(len(ratings))
     min_rating = min(ratings)
     max_rating = max(ratings)
     rating_range = max_rating - min_rating
 
-    # Vertical dot resolution
-    dot_step = max(6, int(rating_range / 22))
-
-    # --------------------------------------------------------
-    # Floating base (semantic truth)
-    # --------------------------------------------------------
-
+    # Floating base (logical)
     float_base = min_rating
 
-    # Visual bottom of dot row (scatter is center-anchored)
-    visual_dot_base = float_base - (DOT_DIAMETER_Y / 2)
+    # Visual base (what eye sees)
+    visual_dot_base = float_base - DOT_DIAMETER_Y
 
+    # Axis limits
     axis_floor = visual_dot_base - rating_range * FLOAT_GAP_RATIO
-    axis_ceiling = max_rating + rating_range * TOP_PADDING_RATIO
+    axis_ceiling = max_rating + rating_range * 0.12
 
-    # --------------------------------------------------------
+    ax.set_ylim(axis_floor, axis_ceiling)
+    ax.set_xlim(-1, len(ratings))
+
     # Draw dots
-    # --------------------------------------------------------
-
-    for x, rating in zip(x_positions, ratings):
-        y_values = range(float_base, rating + dot_step, dot_step)
+    for x, rating in zip(games, ratings):
+        y_values = np.arange(float_base, rating + DOT_STEP, DOT_STEP)
         ax.scatter(
-            [x] * len(y_values),
+            np.full_like(y_values, x),
             y_values,
-            s=18,
+            s=DOT_SIZE,
             color=color,
-            alpha=0.95,
             linewidths=0
         )
 
-    # --------------------------------------------------------
-    # Axis limits
-    # --------------------------------------------------------
+    # Y ticks (bottom aligned correctly)
+    yticks = np.linspace(float_base, axis_ceiling, Y_TICKS_COUNT)
+    yticks[0] = visual_dot_base + DOT_DIAMETER_Y
+    ax.set_yticks(yticks.astype(int))
+    ax.tick_params(axis="y", length=0, labelsize=9)
 
-    ax.set_ylim(axis_floor, axis_ceiling)
-    ax.set_xlim(
-        -X_AXIS_LEFT_PADDING,
-        len(ratings) + X_AXIS_RIGHT_PADDING
+    # X ticks
+    xticks = np.linspace(0, len(ratings), X_TICKS_COUNT).astype(int)
+    ax.set_xticks(xticks)
+    ax.tick_params(axis="x", labelsize=9)
+
+    # Remove spines
+    for spine in ["top", "right", "left"]:
+        ax.spines[spine].set_visible(False)
+
+    ax.spines["bottom"].set_color("#9a9a9a")
+
+    # Title
+    ax.text(
+        0.01, 0.95,
+        title,
+        transform=ax.transAxes,
+        ha="left",
+        va="top",
+        fontsize=10,
+        color="#222"
     )
 
-    # --------------------------------------------------------
-    # Y-axis ticks (aligned above dot base)
-    # --------------------------------------------------------
 
-    yticks = np.linspace(
-        visual_dot_base + DOT_DIAMETER_Y,
-        axis_ceiling,
-        6
-    )
-    yticks = [int(round(y)) for y in yticks]
-    ax.set_yticks(yticks)
+# =========================
+# SVG EXPORT WRAPPER
+# =========================
+def generate_svg(ratings, title, color, filename):
+    fig, ax = plt.subplots(figsize=(10, 3.2))
 
-
-# ============================================================
-# AXIS STYLING
-# ============================================================
-
-def style_axes(ax):
-    ax.spines["left"].set_visible(False)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-
-    ax.spines["bottom"].set_linewidth(1.2)
-    ax.spines["bottom"].set_alpha(0.4)
-
-    ax.tick_params(axis="y", length=0)
-    ax.tick_params(axis="x", length=4, width=1, pad=6)
-
-    ax.grid(False)
-
-
-# ============================================================
-# RENDER ALL CHARTS (PHASE 5 LAYOUT)
-# ============================================================
-
-for time_class, cfg in TIME_CLASSES.items():
-    ratings = get_ratings(time_class)
-
-    # Taller canvas for editorial spacing + future header
-    fig, ax = plt.subplots(figsize=(12.5, 5.8))
-
-    if not ratings:
-        ax.text(
-            0.5, 0.5,
-            "NO DATA AVAILABLE",
-            ha="center",
-            va="center",
-            fontsize=14
-        )
-        ax.axis("off")
-    else:
-        plot_dotted_fill(ax, ratings, cfg["color"])
-        style_axes(ax)
-
-        # Temporary title (will be replaced by Phase 6 header)
-        ax.text(
-            0.0, 1.08,
-            f"{time_class.upper()} · LAST {len(ratings)} GAMES",
-            transform=ax.transAxes,
-            fontsize=13,
-            ha="left",
-            va="bottom"
-        )
-
-    # --------------------------------------------------------
-    # Editorial margins (negative space tuning)
-    # --------------------------------------------------------
-
-    fig.subplots_adjust(
-        left=0.09,
-        right=0.97,
-        bottom=0.16,
-        top=0.78
+    plt.subplots_adjust(
+        left=LEFT_MARGIN,
+        right=1 - RIGHT_MARGIN,
+        top=1 - TOP_MARGIN,
+        bottom=BOTTOM_MARGIN
     )
 
-    plt.savefig(
-        f"{OUTPUT_DIR}/rating-{time_class}.svg",
-        format="svg"
-    )
-    plt.close()
+    render_chart(ax, ratings, title, color)
+    plt.savefig(filename, format="svg")
+    plt.close(fig)
