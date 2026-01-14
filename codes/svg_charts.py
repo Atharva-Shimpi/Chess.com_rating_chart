@@ -18,7 +18,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # ============================================================
 
 BG_COLOR = "#F6F4EF"      # Ivory background
-TEXT_COLOR = "#2A2529"   # Charcoal
+TEXT_COLOR = "#2A2529"    # Charcoal text / axis color
 
 matplotlib.rcParams.update({
     "figure.facecolor": BG_COLOR,
@@ -54,32 +54,23 @@ TIME_CLASSES = {
 # LAYOUT / SPACING CONFIG (SAFE TO TWEAK)
 # ============================================================
 
-# Horizontal spacing (axis → dots)
-X_AXIS_LEFT_PADDING = 2.0
-X_AXIS_RIGHT_PADDING = 1.2
+# Horizontal spacing
+X_AXIS_LEFT_PADDING = 2      # distance from y-axis to first dot column
+X_AXIS_RIGHT_PADDING = 1
 
 # Vertical floating behavior
-FLOAT_GAP_RATIO = 0.16
-TOP_PADDING_RATIO = 0.15
+FLOAT_GAP_RATIO = 0.16       # space between graph base and x-axis
+TOP_PADDING_RATIO = 0.15     # space above tallest dots
 
-# Semantic dot size in rating-units (NOT marker size)
+# Semantic dot size (rating units, NOT marker pixels)
 DOT_DIAMETER_Y = 6
-
-# ------------------------------------------------------------
-# EDITORIAL MARGINS (PHASE 5 — EASY TO CONFIGURE)
-# ------------------------------------------------------------
-
-LEFT_MARGIN   = 0.06
-RIGHT_MARGIN  = 0.06
-BOTTOM_MARGIN = 0.10   # slightly reduced (do NOT affect dot–axis gap)
-TOP_MARGIN    = 0.90   # intentionally larger (future header space)
 
 # ============================================================
 # DATA FETCHING
 # ============================================================
 
 def get_archives():
-    """Return archive URLs (newest → oldest)."""
+    """Return player archive URLs (newest â†’ oldest)."""
     r = requests.get(ARCHIVES_URL.format(user=USERNAME), headers=HEADERS)
     if r.status_code != 200:
         return []
@@ -87,7 +78,7 @@ def get_archives():
 
 
 def get_ratings(time_class):
-    """Fetch last NGAMES ratings for a time class."""
+    """Fetch last NGAMES ratings for a given time control."""
     games = []
 
     for archive in get_archives():
@@ -114,7 +105,7 @@ def get_ratings(time_class):
         )
         ratings.append(g[side]["rating"])
 
-    return ratings[::-1]  # oldest → newest
+    return ratings[::-1]  # oldest â†’ newest
 
 
 # ============================================================
@@ -123,7 +114,7 @@ def get_ratings(time_class):
 
 def plot_dotted_fill(ax, ratings, color):
     """
-    Draw vertically-filled dotted graph with perceptual baseline alignment.
+    Draw a vertically-filled dotted graph with perceptual baseline alignment.
     """
 
     x_positions = list(range(len(ratings)))
@@ -132,16 +123,16 @@ def plot_dotted_fill(ax, ratings, color):
     max_rating = max(ratings)
     rating_range = max_rating - min_rating
 
-    # Vertical dot resolution
+    # Vertical resolution of dot rows
     dot_step = max(6, int(rating_range / 22))
 
     # --------------------------------------------------------
-    # Floating base (semantic truth)
+    # Floating base (semantic source of truth)
     # --------------------------------------------------------
 
     float_base = min_rating
 
-    # Visual bottom of dot row (scatter is center-anchored)
+    # Visual bottom of dots (scatter points are center-anchored)
     visual_dot_base = float_base - (DOT_DIAMETER_Y / 2)
 
     axis_floor = visual_dot_base - rating_range * FLOAT_GAP_RATIO
@@ -163,7 +154,7 @@ def plot_dotted_fill(ax, ratings, color):
         )
 
     # --------------------------------------------------------
-    # Axis limits
+    # Axes limits
     # --------------------------------------------------------
 
     ax.set_ylim(axis_floor, axis_ceiling)
@@ -173,7 +164,7 @@ def plot_dotted_fill(ax, ratings, color):
     )
 
     # --------------------------------------------------------
-    # Y-axis ticks (aligned above dot base)
+    # Y ticks (perceptually aligned to dot base)
     # --------------------------------------------------------
 
     yticks = np.linspace(
@@ -204,14 +195,13 @@ def style_axes(ax):
 
 
 # ============================================================
-# RENDER ALL CHARTS (PHASE 5 — EDITORIAL LAYOUT)
+# RENDER ALL CHARTS
 # ============================================================
 
 for time_class, cfg in TIME_CLASSES.items():
     ratings = get_ratings(time_class)
 
-    # Taller canvas for museum-like breathing room
-    fig, ax = plt.subplots(figsize=(12.5, 5.8))
+    fig, ax = plt.subplots(figsize=(11, 4.2))
 
     if not ratings:
         ax.text(
@@ -226,29 +216,19 @@ for time_class, cfg in TIME_CLASSES.items():
         plot_dotted_fill(ax, ratings, cfg["color"])
         style_axes(ax)
 
-        # Temporary title (will be replaced in Phase 6)
         ax.text(
-            0.0, 1.08,
-            f"{time_class.upper()} · LAST {len(ratings)} GAMES",
+            0.0, 1.06,
+            f"{time_class.upper()} Â· LAST {len(ratings)} GAMES",
             transform=ax.transAxes,
             fontsize=13,
             ha="left",
             va="bottom"
         )
 
-    # --------------------------------------------------------
-    # Editorial margins (fully configurable)
-    # --------------------------------------------------------
-
-    fig.subplots_adjust(
-        left=LEFT_MARGIN,
-        right=1 - RIGHT_MARGIN,
-        bottom=BOTTOM_MARGIN,
-        top=TOP_MARGIN
-    )
-
+    plt.tight_layout(pad=2)
     plt.savefig(
         f"{OUTPUT_DIR}/rating-{time_class}.svg",
-        format="svg"
+        format="svg",
+        bbox_inches="tight"
     )
     plt.close()
