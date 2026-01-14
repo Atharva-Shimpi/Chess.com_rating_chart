@@ -72,10 +72,10 @@ DOT_DIAMETER_Y = 6
 # These affect FIGURE layout only.
 # They do NOT affect dot spacing or axis geometry.
 
-FIG_LEFT_MARGIN   = 0.08   # recommended: 0.06 → 0.10
-FIG_RIGHT_MARGIN  = 0.08   # recommended: 0.06 → 0.10
+FIG_LEFT_MARGIN   = 0.06   # recommended: 0.06 → 0.10
+FIG_RIGHT_MARGIN  = 0.06   # recommended: 0.06 → 0.10
 
-FIG_BOTTOM_MARGIN = 0.12   # recommended: 0.10 → 0.14
+FIG_BOTTOM_MARGIN = 0.10   # recommended: 0.10 → 0.14
 FIG_TOP_MARGIN    = 0.30   # recommended: 0.26 → 0.34
 
 # ============================================================
