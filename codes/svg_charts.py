@@ -17,7 +17,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # GLOBAL VISUAL THEME
 # ============================================================
 
-BG_COLOR = "#F6F4EF"      # Ivory background
+BG_COLOR = "#F6F4EF"       # Ivory background
 TEXT_COLOR = "#2A2529"    # Charcoal text / axis color
 
 matplotlib.rcParams.update({
@@ -51,19 +51,32 @@ TIME_CLASSES = {
 }
 
 # ============================================================
-# LAYOUT / SPACING CONFIG (SAFE TO TWEAK)
+# DATA → AXIS GEOMETRY (DO NOT TIE TO MARGINS)
 # ============================================================
 
-# Horizontal spacing
-X_AXIS_LEFT_PADDING = 2      # distance from y-axis to first dot column
+# Horizontal distance between y-axis and first dot column
+X_AXIS_LEFT_PADDING = 2
 X_AXIS_RIGHT_PADDING = 1
 
-# Vertical floating behavior
-FLOAT_GAP_RATIO = 0.16       # space between graph base and x-axis
-TOP_PADDING_RATIO = 0.15     # space above tallest dots
+# Vertical floating behavior (graph ↔ x-axis)
+FLOAT_GAP_RATIO = 0.16
+TOP_PADDING_RATIO = 0.15
 
-# Semantic dot size (rating units, NOT marker pixels)
+# Semantic dot size in RATING UNITS (not pixels)
 DOT_DIAMETER_Y = 6
+
+# ============================================================
+# PHASE 5 — EDITORIAL LAYOUT MARGINS (SAFE TO TWEAK)
+# ============================================================
+
+# These affect FIGURE layout only.
+# They do NOT affect dot spacing or axis geometry.
+
+FIG_LEFT_MARGIN   = 0.08   # recommended: 0.06 → 0.10
+FIG_RIGHT_MARGIN  = 0.08
+
+FIG_BOTTOM_MARGIN = 0.12   # recommended: 0.10 → 0.14
+FIG_TOP_MARGIN    = 0.30   # ~22–25% reserved for header
 
 # ============================================================
 # DATA FETCHING
@@ -123,25 +136,18 @@ def plot_dotted_fill(ax, ratings, color):
     max_rating = max(ratings)
     rating_range = max_rating - min_rating
 
-    # Vertical resolution of dot rows
     dot_step = max(6, int(rating_range / 22))
 
-    # --------------------------------------------------------
-    # Floating base (semantic source of truth)
-    # --------------------------------------------------------
-
+    # Semantic floating base
     float_base = min_rating
 
-    # Visual bottom of dots (scatter points are center-anchored)
+    # Visual base (scatter dots are center-anchored)
     visual_dot_base = float_base - (DOT_DIAMETER_Y / 2)
 
     axis_floor = visual_dot_base - rating_range * FLOAT_GAP_RATIO
     axis_ceiling = max_rating + rating_range * TOP_PADDING_RATIO
 
-    # --------------------------------------------------------
     # Draw dots
-    # --------------------------------------------------------
-
     for x, rating in zip(x_positions, ratings):
         y_values = range(float_base, rating + dot_step, dot_step)
         ax.scatter(
@@ -153,27 +159,19 @@ def plot_dotted_fill(ax, ratings, color):
             linewidths=0
         )
 
-    # --------------------------------------------------------
-    # Axes limits
-    # --------------------------------------------------------
-
     ax.set_ylim(axis_floor, axis_ceiling)
     ax.set_xlim(
         -X_AXIS_LEFT_PADDING,
         len(ratings) + X_AXIS_RIGHT_PADDING
     )
 
-    # --------------------------------------------------------
-    # Y ticks (perceptually aligned to dot base)
-    # --------------------------------------------------------
-
+    # Y-axis ticks aligned one dot-diameter above visual base
     yticks = np.linspace(
         visual_dot_base + DOT_DIAMETER_Y,
         axis_ceiling,
         6
     )
-    yticks = [int(round(y)) for y in yticks]
-    ax.set_yticks(yticks)
+    ax.set_yticks([int(round(y)) for y in yticks])
 
 
 # ============================================================
@@ -201,7 +199,16 @@ def style_axes(ax):
 for time_class, cfg in TIME_CLASSES.items():
     ratings = get_ratings(time_class)
 
-    fig, ax = plt.subplots(figsize=(11, 4.2))
+    # Taller canvas to support header + editorial margins
+    fig, ax = plt.subplots(figsize=(11, 4.8))
+
+    # Phase-5 layout control (do NOT affect dot geometry)
+    fig.subplots_adjust(
+        left=FIG_LEFT_MARGIN,
+        right=1 - FIG_RIGHT_MARGIN,
+        bottom=FIG_BOTTOM_MARGIN,
+        top=1 - FIG_TOP_MARGIN
+    )
 
     if not ratings:
         ax.text(
@@ -217,7 +224,7 @@ for time_class, cfg in TIME_CLASSES.items():
         style_axes(ax)
 
         ax.text(
-            0.0, 1.06,
+            0.0, 1.04,
             f"{time_class.upper()} · LAST {len(ratings)} GAMES",
             transform=ax.transAxes,
             fontsize=13,
@@ -225,10 +232,8 @@ for time_class, cfg in TIME_CLASSES.items():
             va="bottom"
         )
 
-    plt.tight_layout(pad=2)
     plt.savefig(
         f"{OUTPUT_DIR}/rating-{time_class}.svg",
-        format="svg",
-        bbox_inches="tight"
+        format="svg"
     )
     plt.close()
