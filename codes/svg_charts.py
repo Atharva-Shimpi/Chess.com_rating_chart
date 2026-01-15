@@ -75,13 +75,13 @@ FIG_TOP_MARGIN    = 0.30
 # HEADER CONSTANTS
 # ============================================================
 
-HEADER_Y_OFFSET  = 0.135        # increasing --> header text moves upward , [0.09 - 0.15]
-DIVIDER_Y_OFFSET = 0.075       # increasing --> divider moves upward , [0.05 - 0.09]
+HEADER_Y_OFFSET  = 0.135
+DIVIDER_Y_OFFSET = 0.075
 
 TEXT_FONT_SIZE = 13
 DOT_FONT_SIZE  = 15
 
-DOT_GAP = 0.030   # controls space BEFORE and AFTER each middle dot (stable)
+DOT_GAP = 0.030  # stable spacing around middle dots
 
 # ============================================================
 # DATA FETCHING
@@ -150,7 +150,7 @@ def style_axes(ax):
     ax.grid(False)
 
 # ============================================================
-# HEADER ENGINE (DOT-SAFE, PARAMETER-STABLE)
+# HEADER ENGINE (VISUALLY CORRECT)
 # ============================================================
 
 def measure(fig, text, size):
@@ -160,6 +160,22 @@ def measure(fig, text, size):
     t.remove()
     return w
 
+def get_visual_left_edge(fig, ax):
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+
+    tick_extents = [
+        t.get_window_extent(renderer)
+        for t in ax.get_yticklabels()
+        if t.get_text()
+    ]
+
+    if not tick_extents:
+        return ax.get_position().x0
+
+    leftmost_px = min(e.x0 for e in tick_extents)
+    return leftmost_px / fig.bbox.width
+
 def draw_header(fig, ax, time_class, ratings, color):
     game_count = len(ratings)
     latest_elo = ratings[-1]
@@ -167,8 +183,9 @@ def draw_header(fig, ax, time_class, ratings, color):
     ist = pytz.timezone("Asia/Kolkata")
     time_str = datetime.now(ist).strftime("%-I:%M %p IST")
 
-    x_left  = ax.get_position().x0
-    x_right = 1 - FIG_RIGHT_MARGIN
+    x_left  = get_visual_left_edge(fig, ax)
+    x_right = ax.get_position().x1
+
     y_text  = 1 - FIG_TOP_MARGIN + HEADER_Y_OFFSET
     y_div   = 1 - FIG_TOP_MARGIN + DIVIDER_Y_OFFSET
 
@@ -180,10 +197,12 @@ def draw_header(fig, ax, time_class, ratings, color):
 
     cursor = x_left
     for i, (txt, col) in enumerate(left_parts):
-        fig.text(cursor, y_text, txt, ha="left", va="center", fontsize=TEXT_FONT_SIZE, color=col)
+        fig.text(cursor, y_text, txt, ha="left", va="center",
+                 fontsize=TEXT_FONT_SIZE, color=col)
         cursor += measure(fig, txt, TEXT_FONT_SIZE)
         if i < len(left_parts) - 1:
-            fig.text(cursor + DOT_GAP/2, y_text, "·", ha="center", va="center",
+            fig.text(cursor + DOT_GAP/2, y_text, "·",
+                     ha="center", va="center",
                      fontsize=DOT_FONT_SIZE, color=TEXT_COLOR)
             cursor += DOT_GAP
 
@@ -194,14 +213,19 @@ def draw_header(fig, ax, time_class, ratings, color):
         (time_str, TEXT_COLOR),
     ]
 
-    total_width = sum(measure(fig, t, TEXT_FONT_SIZE) for t, _ in right_parts) + DOT_GAP * (len(right_parts) - 1)
+    total_width = sum(
+        measure(fig, t, TEXT_FONT_SIZE) for t, _ in right_parts
+    ) + DOT_GAP * (len(right_parts) - 1)
+
     cursor = x_right - total_width
 
     for i, (txt, col) in enumerate(right_parts):
-        fig.text(cursor, y_text, txt, ha="left", va="center", fontsize=TEXT_FONT_SIZE, color=col)
+        fig.text(cursor, y_text, txt, ha="left", va="center",
+                 fontsize=TEXT_FONT_SIZE, color=col)
         cursor += measure(fig, txt, TEXT_FONT_SIZE)
         if i < len(right_parts) - 1:
-            fig.text(cursor + DOT_GAP/2, y_text, "·", ha="center", va="center",
+            fig.text(cursor + DOT_GAP/2, y_text, "·",
+                     ha="center", va="center",
                      fontsize=DOT_FONT_SIZE, color=TEXT_COLOR)
             cursor += DOT_GAP
 
