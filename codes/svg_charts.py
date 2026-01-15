@@ -81,7 +81,10 @@ DIVIDER_Y_OFFSET = 0.075
 TEXT_FONT_SIZE = 13
 DOT_FONT_SIZE  = 15
 
-DOT_GAP = 0.030  # stable, symmetric spacing around middle dots
+DOT_GAP = 0.030
+
+PRIMARY_OPACITY   = 1.0
+SECONDARY_OPACITY = 0.6
 
 # ============================================================
 # DATA FETCHING
@@ -144,33 +147,22 @@ def plot_dotted_fill(ax, ratings, color):
 def style_axes(ax):
     for s in ["left", "top", "right", "bottom"]:
         ax.spines[s].set_visible(False)
-
     ax.tick_params(axis="y", length=0)
     ax.tick_params(axis="x", length=4, pad=6)
     ax.grid(False)
 
 # ============================================================
-# VISUAL EDGE CALCULATION
+# VISUAL EDGE
 # ============================================================
 
 def get_visual_left_edge(fig, ax):
     fig.canvas.draw()
     renderer = fig.canvas.get_renderer()
-
-    tick_extents = [
-        t.get_window_extent(renderer)
-        for t in ax.get_yticklabels()
-        if t.get_text()
-    ]
-
-    if not tick_extents:
-        return ax.get_position().x0
-
-    leftmost_px = min(e.x0 for e in tick_extents)
-    return leftmost_px / fig.bbox.width
+    extents = [t.get_window_extent(renderer) for t in ax.get_yticklabels() if t.get_text()]
+    return min(e.x0 for e in extents) / fig.bbox.width if extents else ax.get_position().x0
 
 # ============================================================
-# HEADER + DIVIDER
+# MEASURE TEXT
 # ============================================================
 
 def measure(fig, text, size):
@@ -179,6 +171,10 @@ def measure(fig, text, size):
     w = t.get_window_extent(renderer=fig.canvas.get_renderer()).width / fig.bbox.width
     t.remove()
     return w
+
+# ============================================================
+# HEADER
+# ============================================================
 
 def draw_header(fig, ax, time_class, ratings, color):
     game_count = len(ratings)
@@ -193,60 +189,48 @@ def draw_header(fig, ax, time_class, ratings, color):
     y_text = 1 - FIG_TOP_MARGIN + HEADER_Y_OFFSET
     y_div  = 1 - FIG_TOP_MARGIN + DIVIDER_Y_OFFSET
 
-    # LEFT CLUSTER
-    left_parts = [
-        (time_class.upper(), color),
-        ("CHESS.COM", TEXT_COLOR),
-    ]
-
     cursor = x_left
-    for i, (txt, col) in enumerate(left_parts):
-        fig.text(cursor, y_text, txt, ha="left", va="center",
-                 fontsize=TEXT_FONT_SIZE, color=col)
-        cursor += measure(fig, txt, TEXT_FONT_SIZE)
-        if i < len(left_parts) - 1:
-            fig.text(cursor + DOT_GAP / 2, y_text, "·",
-                     ha="center", va="center",
-                     fontsize=DOT_FONT_SIZE, color=TEXT_COLOR)
-            cursor += DOT_GAP
+
+    # LEFT CLUSTER
+    fig.text(cursor, y_text, time_class.upper(),
+             fontsize=TEXT_FONT_SIZE, color=color, alpha=PRIMARY_OPACITY)
+    cursor += measure(fig, time_class.upper(), TEXT_FONT_SIZE)
+
+    fig.text(cursor + DOT_GAP/2, y_text, "·",
+             fontsize=DOT_FONT_SIZE, color=TEXT_COLOR, alpha=PRIMARY_OPACITY)
+    cursor += DOT_GAP
+
+    fig.text(cursor, y_text, "CHESS.COM",
+             fontsize=TEXT_FONT_SIZE, color=TEXT_COLOR, alpha=SECONDARY_OPACITY)
 
     # RIGHT CLUSTER
-    right_parts = [
-        (f"{game_count} GAMES", color),
-        (f"{latest_elo} ELO", color),
-        (time_str, TEXT_COLOR),
+    parts = [
+        (str(game_count), color, PRIMARY_OPACITY),
+        (" GAMES", TEXT_COLOR, SECONDARY_OPACITY),
+        (" · ", TEXT_COLOR, PRIMARY_OPACITY),
+        (str(latest_elo), color, PRIMARY_OPACITY),
+        (" ELO", TEXT_COLOR, SECONDARY_OPACITY),
+        (" · ", TEXT_COLOR, PRIMARY_OPACITY),
+        (time_str, TEXT_COLOR, SECONDARY_OPACITY),
     ]
 
-    total_width = sum(
-        measure(fig, t, TEXT_FONT_SIZE) for t, _ in right_parts
-    ) + DOT_GAP * (len(right_parts) - 1)
-
+    total_width = sum(measure(fig, t, TEXT_FONT_SIZE) for t, _, _ in parts)
     cursor = x_right - total_width
 
-    for i, (txt, col) in enumerate(right_parts):
-        fig.text(cursor, y_text, txt, ha="left", va="center",
-                 fontsize=TEXT_FONT_SIZE, color=col)
-        cursor += measure(fig, txt, TEXT_FONT_SIZE)
-        if i < len(right_parts) - 1:
-            fig.text(cursor + DOT_GAP / 2, y_text, "·",
-                     ha="center", va="center",
-                     fontsize=DOT_FONT_SIZE, color=TEXT_COLOR)
-            cursor += DOT_GAP
+    for text, col, op in parts:
+        fig.text(cursor, y_text, text,
+                 fontsize=TEXT_FONT_SIZE, color=col, alpha=op)
+        cursor += measure(fig, text, TEXT_FONT_SIZE)
 
     # DIVIDER
     fig.lines.append(
-        plt.Line2D(
-            [x_left, x_right],
-            [y_div, y_div],
-            transform=fig.transFigure,
-            color=TEXT_COLOR,
-            linewidth=1.2,
-            alpha=0.8
-        )
+        plt.Line2D([x_left, x_right], [y_div, y_div],
+                   transform=fig.transFigure,
+                   color=TEXT_COLOR, linewidth=1.2, alpha=0.8)
     )
 
 # ============================================================
-# X-AXIS (VISUALLY ALIGNED)
+# X-AXIS
 # ============================================================
 
 def draw_x_axis(fig, ax):
@@ -255,14 +239,9 @@ def draw_x_axis(fig, ax):
     y = ax.get_position().y0
 
     fig.lines.append(
-        plt.Line2D(
-            [x_left, x_right],
-            [y, y],
-            transform=fig.transFigure,
-            color=TEXT_COLOR,
-            linewidth=1.2,
-            alpha=0.4
-        )
+        plt.Line2D([x_left, x_right], [y, y],
+                   transform=fig.transFigure,
+                   color=TEXT_COLOR, linewidth=1.2, alpha=0.4)
     )
 
 # ============================================================
