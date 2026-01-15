@@ -29,8 +29,14 @@ jobs:
         with:
           python-version: "3.12.8"
 
+      - name: Verify requirements file
+        run: |
+          test -f Chess.com_rating_chart/requirements.txt
+
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r Chess.com_rating_chart/requirements.txt
 
       - name: Generate SVG charts
         run: python codes/svg_charts.py
