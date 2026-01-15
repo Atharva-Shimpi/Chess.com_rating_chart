@@ -19,8 +19,8 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # GLOBAL VISUAL THEME
 # ============================================================
 
-BG_COLOR = "#F6F4EF"       # Ivory background
-TEXT_COLOR = "#2A2529"    # Charcoal text / axis color
+BG_COLOR = "#F6F4EF"
+TEXT_COLOR = "#2A2529"
 
 matplotlib.rcParams.update({
     "figure.facecolor": BG_COLOR,
@@ -47,13 +47,13 @@ HEADERS = {"User-Agent": "ChessRatingRefresh/1.0"}
 ARCHIVES_URL = "https://api.chess.com/pub/player/{user}/games/archives"
 
 TIME_CLASSES = {
-    "blitz":  {"color": "#3E2F2A"},  # Umber
-    "rapid":  {"color": "#3A5F3A"},  # Moss Green
-    "bullet": {"color": "#1F2A44"},  # Midnight Blue
+    "blitz":  {"color": "#3E2F2A"},
+    "rapid":  {"color": "#3A5F3A"},
+    "bullet": {"color": "#1F2A44"},
 }
 
 # ============================================================
-# AXIS GEOMETRY (DO NOT TIE TO MARGINS)
+# AXIS GEOMETRY (INDEPENDENT OF MARGINS)
 # ============================================================
 
 X_AXIS_LEFT_PADDING = 2
@@ -62,7 +62,7 @@ X_AXIS_RIGHT_PADDING = 1
 FLOAT_GAP_RATIO = 0.16
 TOP_PADDING_RATIO = 0.15
 
-DOT_DIAMETER_Y = 6  # semantic vertical diameter in rating units
+DOT_DIAMETER_Y = 6
 
 # ============================================================
 # PHASE 5 — EDITORIAL LAYOUT MARGINS
@@ -73,6 +73,17 @@ FIG_RIGHT_MARGIN  = 0.045
 
 FIG_BOTTOM_MARGIN = 0.10
 FIG_TOP_MARGIN    = 0.30
+
+# ============================================================
+# PHASE 6 — HEADER LAYOUT CONSTANTS
+# ============================================================
+
+HEADER_Y_OFFSET  = 0.11
+DIVIDER_Y_OFFSET = 0.075
+
+TOKEN_GAP = 0.018
+DOT_FONT_SIZE = 14
+TEXT_FONT_SIZE = 13
 
 # ============================================================
 # DATA FETCHING
@@ -114,9 +125,8 @@ def get_ratings(time_class):
 
     return ratings[::-1]
 
-
 # ============================================================
-# DOTTED GRAPH RENDERING
+# DOTTED GRAPH
 # ============================================================
 
 def plot_dotted_fill(ax, ratings, color):
@@ -146,10 +156,7 @@ def plot_dotted_fill(ax, ratings, color):
         )
 
     ax.set_ylim(axis_floor, axis_ceiling)
-    ax.set_xlim(
-        -X_AXIS_LEFT_PADDING,
-        len(ratings) + X_AXIS_RIGHT_PADDING
-    )
+    ax.set_xlim(-X_AXIS_LEFT_PADDING, len(ratings) + X_AXIS_RIGHT_PADDING)
 
     yticks = np.linspace(
         visual_dot_base + DOT_DIAMETER_Y,
@@ -158,10 +165,6 @@ def plot_dotted_fill(ax, ratings, color):
     )
     ax.set_yticks([int(round(y)) for y in yticks])
 
-
-# ============================================================
-# AXIS STYLING
-# ============================================================
 
 def style_axes(ax):
     ax.spines["left"].set_visible(False)
@@ -176,12 +179,11 @@ def style_axes(ax):
 
     ax.grid(False)
 
-
 # ============================================================
-# PHASE 6 — HEADER BLOCK (FIGURE LEVEL)
+# PHASE 6 — HEADER (FIXED)
 # ============================================================
 
-def draw_header(fig, time_class, ratings, color):
+def draw_header(fig, ax, time_class, ratings, color):
     game_count = len(ratings)
     latest_elo = ratings[-1]
 
@@ -189,43 +191,110 @@ def draw_header(fig, time_class, ratings, color):
     now = datetime.now(ist)
     time_str = now.strftime("%-I:%M %p IST")
 
-    # Left cluster
+    # Align header to y-axis labels
+    y_label_x = ax.get_position().x0
+
+    y_text = 1 - FIG_TOP_MARGIN + HEADER_Y_OFFSET
+    y_div  = 1 - FIG_TOP_MARGIN + DIVIDER_Y_OFFSET
+
+    # LEFT CLUSTER
     fig.text(
-        FIG_LEFT_MARGIN,
-        1 - FIG_TOP_MARGIN + 0.09,
-        f"{time_class.upper()} – CHESS.COM",
+        y_label_x,
+        y_text,
+        f"{time_class.upper()}",
         ha="left",
         va="center",
-        fontsize=13,
+        fontsize=TEXT_FONT_SIZE,
         color=color
     )
 
-    # Right cluster
     fig.text(
-        1 - FIG_RIGHT_MARGIN,
-        1 - FIG_TOP_MARGIN + 0.09,
-        f"{game_count} GAMES   {latest_elo} ELO   {time_str}",
+        y_label_x + TOKEN_GAP,
+        y_text,
+        "·",
+        ha="left",
+        va="center",
+        fontsize=DOT_FONT_SIZE,
+        color=TEXT_COLOR
+    )
+
+    fig.text(
+        y_label_x + TOKEN_GAP * 2,
+        y_text,
+        "CHESS.COM",
+        ha="left",
+        va="center",
+        fontsize=TEXT_FONT_SIZE,
+        color=TEXT_COLOR
+    )
+
+    # RIGHT CLUSTER
+    x_right = 1 - FIG_RIGHT_MARGIN
+
+    fig.text(
+        x_right,
+        y_text,
+        time_str,
         ha="right",
         va="center",
-        fontsize=13,
+        fontsize=TEXT_FONT_SIZE,
+        color=TEXT_COLOR
+    )
+
+    fig.text(
+        x_right - TOKEN_GAP,
+        y_text,
+        "·",
+        ha="right",
+        va="center",
+        fontsize=DOT_FONT_SIZE,
+        color=TEXT_COLOR
+    )
+
+    fig.text(
+        x_right - TOKEN_GAP * 2,
+        y_text,
+        f"{latest_elo} ELO",
+        ha="right",
+        va="center",
+        fontsize=TEXT_FONT_SIZE,
         color=color
     )
 
-    # Divider
+    fig.text(
+        x_right - TOKEN_GAP * 3,
+        y_text,
+        "·",
+        ha="right",
+        va="center",
+        fontsize=DOT_FONT_SIZE,
+        color=TEXT_COLOR
+    )
+
+    fig.text(
+        x_right - TOKEN_GAP * 4,
+        y_text,
+        f"{game_count} GAMES",
+        ha="right",
+        va="center",
+        fontsize=TEXT_FONT_SIZE,
+        color=color
+    )
+
+    # DIVIDER
     fig.lines.append(
         plt.Line2D(
-            [FIG_LEFT_MARGIN, 1 - FIG_RIGHT_MARGIN],
-            [1 - FIG_TOP_MARGIN + 0.05] * 2,
+            [y_label_x, 1 - FIG_RIGHT_MARGIN],
+            [y_div, y_div],
             transform=fig.transFigure,
             color=TEXT_COLOR,
             linewidth=1.2,
-            alpha=0.6
+            alpha=0.75
         )
     )
 
-
 # ============================================================
-# RENDER ALL CHARTS
+# RENDER
 # ============================================================
 
 for time_class, cfg in TIME_CLASSES.items():
@@ -240,22 +309,13 @@ for time_class, cfg in TIME_CLASSES.items():
         top=1 - FIG_TOP_MARGIN
     )
 
-    if not ratings:
-        ax.text(
-            0.5, 0.5,
-            "NO DATA AVAILABLE",
-            ha="center",
-            va="center",
-            fontsize=14
-        )
-        ax.axis("off")
-    else:
+    if ratings:
         plot_dotted_fill(ax, ratings, cfg["color"])
         style_axes(ax)
-        draw_header(fig, time_class, ratings, cfg["color"])
+        draw_header(fig, ax, time_class, ratings, cfg["color"])
+    else:
+        ax.text(0.5, 0.5, "NO DATA AVAILABLE", ha="center", va="center")
+        ax.axis("off")
 
-    plt.savefig(
-        f"{OUTPUT_DIR}/rating-{time_class}.svg",
-        format="svg"
-    )
+    plt.savefig(f"{OUTPUT_DIR}/rating-{time_class}.svg", format="svg")
     plt.close()
