@@ -1,8 +1,6 @@
 import os
 import requests
 import numpy as np
-from datetime import datetime
-import pytz
 
 import matplotlib
 matplotlib.use("Agg")
@@ -53,7 +51,7 @@ TIME_CLASSES = {
 }
 
 # ============================================================
-# AXIS GEOMETRY (DO NOT TIE TO MARGINS)
+# DATA → AXIS GEOMETRY (DO NOT TIE TO MARGINS)
 # ============================================================
 
 X_AXIS_LEFT_PADDING = 2
@@ -62,7 +60,7 @@ X_AXIS_RIGHT_PADDING = 1
 FLOAT_GAP_RATIO = 0.16
 TOP_PADDING_RATIO = 0.15
 
-DOT_DIAMETER_Y = 6  # semantic vertical diameter in rating units
+DOT_DIAMETER_Y = 6
 
 # ============================================================
 # PHASE 5 — EDITORIAL LAYOUT MARGINS
@@ -70,9 +68,16 @@ DOT_DIAMETER_Y = 6  # semantic vertical diameter in rating units
 
 FIG_LEFT_MARGIN   = 0.075
 FIG_RIGHT_MARGIN  = 0.045
-
 FIG_BOTTOM_MARGIN = 0.10
 FIG_TOP_MARGIN    = 0.30
+
+# ============================================================
+# PHASE 6 — HEADER TYPOGRAPHY CONTROL
+# ============================================================
+
+# Space around middle dot separators in header
+# Recommended range: 2–4 spaces
+HEADER_DOT_SPACING = "   "
 
 # ============================================================
 # DATA FETCHING
@@ -113,7 +118,6 @@ def get_ratings(time_class):
         ratings.append(g[side]["rating"])
 
     return ratings[::-1]
-
 
 # ============================================================
 # DOTTED GRAPH RENDERING
@@ -158,7 +162,6 @@ def plot_dotted_fill(ax, ratings, color):
     )
     ax.set_yticks([int(round(y)) for y in yticks])
 
-
 # ============================================================
 # AXIS STYLING
 # ============================================================
@@ -176,54 +179,6 @@ def style_axes(ax):
 
     ax.grid(False)
 
-
-# ============================================================
-# PHASE 6 — HEADER BLOCK (FIGURE LEVEL)
-# ============================================================
-
-def draw_header(fig, time_class, ratings, color):
-    game_count = len(ratings)
-    latest_elo = ratings[-1]
-
-    ist = pytz.timezone("Asia/Kolkata")
-    now = datetime.now(ist)
-    time_str = now.strftime("%-I:%M %p IST")
-
-    # Left cluster
-    fig.text(
-        FIG_LEFT_MARGIN,
-        1 - FIG_TOP_MARGIN + 0.09,
-        f"{time_class.upper()} – CHESS.COM",
-        ha="left",
-        va="center",
-        fontsize=13,
-        color=color
-    )
-
-    # Right cluster
-    fig.text(
-        1 - FIG_RIGHT_MARGIN,
-        1 - FIG_TOP_MARGIN + 0.09,
-        f"{game_count} GAMES   {latest_elo} ELO   {time_str}",
-        ha="right",
-        va="center",
-        fontsize=13,
-        color=color
-    )
-
-    # Divider
-    fig.lines.append(
-        plt.Line2D(
-            [FIG_LEFT_MARGIN, 1 - FIG_RIGHT_MARGIN],
-            [1 - FIG_TOP_MARGIN + 0.05] * 2,
-            transform=fig.transFigure,
-            color=TEXT_COLOR,
-            linewidth=1.2,
-            alpha=0.6
-        )
-    )
-
-
 # ============================================================
 # RENDER ALL CHARTS
 # ============================================================
@@ -240,7 +195,41 @@ for time_class, cfg in TIME_CLASSES.items():
         top=1 - FIG_TOP_MARGIN
     )
 
-    if not ratings:
+    if ratings:
+        plot_dotted_fill(ax, ratings, cfg["color"])
+        style_axes(ax)
+
+        header_text = (
+            f"{time_class.upper()} – CHESS.COM"
+        )
+
+        right_cluster = (
+            f"{len(ratings)} GAMES"
+            f"{HEADER_DOT_SPACING}·{HEADER_DOT_SPACING}"
+            f"{ratings[-1]} ELO"
+        )
+
+        ax.text(
+            0.0, 1.08,
+            header_text,
+            transform=ax.transAxes,
+            fontsize=13,
+            ha="left",
+            va="bottom",
+            color=cfg["color"]
+        )
+
+        ax.text(
+            1.0, 1.08,
+            right_cluster,
+            transform=ax.transAxes,
+            fontsize=13,
+            ha="right",
+            va="bottom",
+            color=cfg["color"]
+        )
+
+    else:
         ax.text(
             0.5, 0.5,
             "NO DATA AVAILABLE",
@@ -249,10 +238,6 @@ for time_class, cfg in TIME_CLASSES.items():
             fontsize=14
         )
         ax.axis("off")
-    else:
-        plot_dotted_fill(ax, ratings, cfg["color"])
-        style_axes(ax)
-        draw_header(fig, time_class, ratings, cfg["color"])
 
     plt.savefig(
         f"{OUTPUT_DIR}/rating-{time_class}.svg",
