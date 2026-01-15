@@ -260,7 +260,7 @@ def draw_x_axis(fig, ax):
             [y, y],
             transform=fig.transFigure,
             color=TEXT_COLOR,
-            linewidth=1.0,
+            linewidth=1.2,
             alpha=0.4
         )
     )
