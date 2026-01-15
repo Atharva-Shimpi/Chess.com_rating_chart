@@ -81,7 +81,7 @@ DIVIDER_Y_OFFSET = 0.075
 TEXT_FONT_SIZE = 13
 DOT_FONT_SIZE  = 15
 
-DOT_GAP = 0.030  # stable spacing around middle dots
+DOT_GAP = 0.030
 
 # ============================================================
 # DATA FETCHING
@@ -142,15 +142,15 @@ def plot_dotted_fill(ax, ratings, color):
     ax.set_yticks([int(round(y)) for y in yticks])
 
 def style_axes(ax):
-    for s in ["left", "top", "right"]:
+    for s in ["left", "top", "right", "bottom"]:
         ax.spines[s].set_visible(False)
-    ax.spines["bottom"].set_alpha(0.4)
+
     ax.tick_params(axis="y", length=0)
     ax.tick_params(axis="x", length=4, pad=6)
     ax.grid(False)
 
 # ============================================================
-# HEADER ENGINE (VISUALLY CORRECT)
+# HEADER ENGINE
 # ============================================================
 
 def measure(fig, text, size):
@@ -160,22 +160,6 @@ def measure(fig, text, size):
     t.remove()
     return w
 
-def get_visual_left_edge(fig, ax):
-    fig.canvas.draw()
-    renderer = fig.canvas.get_renderer()
-
-    tick_extents = [
-        t.get_window_extent(renderer)
-        for t in ax.get_yticklabels()
-        if t.get_text()
-    ]
-
-    if not tick_extents:
-        return ax.get_position().x0
-
-    leftmost_px = min(e.x0 for e in tick_extents)
-    return leftmost_px / fig.bbox.width
-
 def draw_header(fig, ax, time_class, ratings, color):
     game_count = len(ratings)
     latest_elo = ratings[-1]
@@ -183,47 +167,41 @@ def draw_header(fig, ax, time_class, ratings, color):
     ist = pytz.timezone("Asia/Kolkata")
     time_str = datetime.now(ist).strftime("%-I:%M %p IST")
 
-    x_left  = get_visual_left_edge(fig, ax)
-    x_right = ax.get_position().x1
-
+    x_left  = ax.get_position().x0
+    x_right = 1 - FIG_RIGHT_MARGIN
     y_text  = 1 - FIG_TOP_MARGIN + HEADER_Y_OFFSET
     y_div   = 1 - FIG_TOP_MARGIN + DIVIDER_Y_OFFSET
 
     # -------- LEFT CLUSTER --------
-    left_parts = [
+    cursor = x_left
+    for i, (txt, col) in enumerate([
         (time_class.upper(), color),
         ("CHESS.COM", TEXT_COLOR),
-    ]
-
-    cursor = x_left
-    for i, (txt, col) in enumerate(left_parts):
+    ]):
         fig.text(cursor, y_text, txt, ha="left", va="center",
                  fontsize=TEXT_FONT_SIZE, color=col)
         cursor += measure(fig, txt, TEXT_FONT_SIZE)
-        if i < len(left_parts) - 1:
+        if i == 0:
             fig.text(cursor + DOT_GAP/2, y_text, "·",
                      ha="center", va="center",
                      fontsize=DOT_FONT_SIZE, color=TEXT_COLOR)
             cursor += DOT_GAP
 
     # -------- RIGHT CLUSTER --------
-    right_parts = [
+    parts = [
         (f"{game_count} GAMES", color),
         (f"{latest_elo} ELO", color),
         (time_str, TEXT_COLOR),
     ]
 
-    total_width = sum(
-        measure(fig, t, TEXT_FONT_SIZE) for t, _ in right_parts
-    ) + DOT_GAP * (len(right_parts) - 1)
-
+    total_width = sum(measure(fig, t, TEXT_FONT_SIZE) for t, _ in parts) + DOT_GAP * 2
     cursor = x_right - total_width
 
-    for i, (txt, col) in enumerate(right_parts):
+    for i, (txt, col) in enumerate(parts):
         fig.text(cursor, y_text, txt, ha="left", va="center",
                  fontsize=TEXT_FONT_SIZE, color=col)
         cursor += measure(fig, txt, TEXT_FONT_SIZE)
-        if i < len(right_parts) - 1:
+        if i < 2:
             fig.text(cursor + DOT_GAP/2, y_text, "·",
                      ha="center", va="center",
                      fontsize=DOT_FONT_SIZE, color=TEXT_COLOR)
@@ -238,6 +216,19 @@ def draw_header(fig, ax, time_class, ratings, color):
             color=TEXT_COLOR,
             linewidth=1.2,
             alpha=0.8
+        )
+    )
+
+    # -------- X-AXIS LINE (MATCH DIVIDER WIDTH) --------
+    y_axis = ax.get_position().y0
+    fig.lines.append(
+        plt.Line2D(
+            [x_left, x_right],
+            [y_axis, y_axis],
+            transform=fig.transFigure,
+            color=TEXT_COLOR,
+            linewidth=1.0,
+            alpha=0.4
         )
     )
 
