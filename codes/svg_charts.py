@@ -20,7 +20,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # ============================================================
 
 BG_COLOR = "#F6F4EF"
-TEXT_COLOR = "#1F1F1F"   # near-black / charcoal
+TEXT_COLOR = "#1F1F1F"   # charcoal
 
 matplotlib.rcParams.update({
     "figure.facecolor": BG_COLOR,
@@ -79,11 +79,11 @@ HEADER_Y_OFFSET  = 0.135
 DIVIDER_Y_OFFSET = 0.075
 
 TEXT_FONT_SIZE = 13
-DOT_FONT_SIZE  = 18      # slightly larger middle dot
-DOT_GAP        = 0.045   # spacing around middle dot
+DOT_FONT_SIZE  = 18      # middle dot size
+DOT_GAP        = 0.045   # spacing around dot
 
 PRIMARY_OPACITY   = 1.0
-SECONDARY_OPACITY = 0.5
+SECONDARY_OPACITY = 0.6
 
 # ============================================================
 # DATA FETCHING
@@ -118,6 +118,124 @@ def get_ratings(time_class):
     return ratings[::-1]
 
 # ============================================================
+# MEASURE TEXT
+# ============================================================
+
+def measure(fig, text, size):
+    t = fig.text(0, 0, text, fontsize=size)
+    fig.canvas.draw()
+    w = t.get_window_extent(renderer=fig.canvas.get_renderer()).width / fig.bbox.width
+    t.remove()
+    return w
+
+# ============================================================
+# VISUAL EDGE
+# ============================================================
+
+def get_visual_left_edge(fig, ax):
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    extents = [t.get_window_extent(renderer) for t in ax.get_yticklabels() if t.get_text()]
+    return min(e.x0 for e in extents) / fig.bbox.width if extents else ax.get_position().x0
+
+# ============================================================
+# HEADER DOT
+# ============================================================
+
+def draw_middle_dot(fig, x, y):
+    fig.text(
+        x, y, "·",
+        fontsize=DOT_FONT_SIZE,
+        color=TEXT_COLOR,
+        alpha=PRIMARY_OPACITY
+    )
+
+# ============================================================
+# HEADER
+# ============================================================
+
+def draw_header(fig, ax, time_class, ratings, color):
+    game_count = len(ratings)
+    latest_elo = ratings[-1]
+
+    ist = pytz.timezone("Asia/Kolkata")
+    time_main = datetime.now(ist).strftime("%-I:%M %p")
+    time_unit = " IST"
+
+    x_left  = get_visual_left_edge(fig, ax)
+    x_right = ax.get_position().x1
+
+    y_text = 1 - FIG_TOP_MARGIN + HEADER_Y_OFFSET
+    y_div  = 1 - FIG_TOP_MARGIN + DIVIDER_Y_OFFSET
+
+    cursor = x_left
+
+    # LEFT CLUSTER
+    fig.text(cursor, y_text, time_class.upper(),
+             fontsize=TEXT_FONT_SIZE, color=color, alpha=PRIMARY_OPACITY)
+    cursor += measure(fig, time_class.upper(), TEXT_FONT_SIZE)
+
+    cursor += DOT_GAP / 2
+    draw_middle_dot(fig, cursor, y_text)
+    cursor += DOT_GAP
+
+    fig.text(cursor, y_text, "CHESS.COM",
+             fontsize=TEXT_FONT_SIZE, color=TEXT_COLOR, alpha=SECONDARY_OPACITY)
+
+    # RIGHT CLUSTER (fully parameterized)
+    elements = [
+        (str(game_count), color, PRIMARY_OPACITY),
+        (" GAMES", TEXT_COLOR, SECONDARY_OPACITY),
+        ("DOT", None, None),
+        (str(latest_elo), color, PRIMARY_OPACITY),
+        (" ELO", TEXT_COLOR, SECONDARY_OPACITY),
+        ("DOT", None, None),
+        (time_main, color, PRIMARY_OPACITY),
+        (time_unit, TEXT_COLOR, SECONDARY_OPACITY),
+    ]
+
+    total_width = 0
+    for text, _, _ in elements:
+        if text == "DOT":
+            total_width += DOT_GAP
+        else:
+            total_width += measure(fig, text, TEXT_FONT_SIZE)
+
+    cursor = x_right - total_width
+
+    for text, col, op in elements:
+        if text == "DOT":
+            cursor += DOT_GAP / 2
+            draw_middle_dot(fig, cursor, y_text)
+            cursor += DOT_GAP / 2
+        else:
+            fig.text(cursor, y_text, text,
+                     fontsize=TEXT_FONT_SIZE, color=col, alpha=op)
+            cursor += measure(fig, text, TEXT_FONT_SIZE)
+
+    # DIVIDER
+    fig.lines.append(
+        plt.Line2D([x_left, x_right], [y_div, y_div],
+                   transform=fig.transFigure,
+                   color=TEXT_COLOR, linewidth=1.2, alpha=0.8)
+    )
+
+# ============================================================
+# X-AXIS
+# ============================================================
+
+def draw_x_axis(fig, ax):
+    x_left  = get_visual_left_edge(fig, ax)
+    x_right = ax.get_position().x1
+    y = ax.get_position().y0
+
+    fig.lines.append(
+        plt.Line2D([x_left, x_right], [y, y],
+                   transform=fig.transFigure,
+                   color=TEXT_COLOR, linewidth=1.2, alpha=0.4)
+    )
+
+# ============================================================
 # PLOT
 # ============================================================
 
@@ -149,101 +267,6 @@ def style_axes(ax):
     ax.tick_params(axis="y", length=0)
     ax.tick_params(axis="x", length=4, pad=6)
     ax.grid(False)
-
-# ============================================================
-# VISUAL EDGE
-# ============================================================
-
-def get_visual_left_edge(fig, ax):
-    fig.canvas.draw()
-    renderer = fig.canvas.get_renderer()
-    extents = [t.get_window_extent(renderer) for t in ax.get_yticklabels() if t.get_text()]
-    return min(e.x0 for e in extents) / fig.bbox.width if extents else ax.get_position().x0
-
-# ============================================================
-# MEASURE TEXT
-# ============================================================
-
-def measure(fig, text, size):
-    t = fig.text(0, 0, text, fontsize=size)
-    fig.canvas.draw()
-    w = t.get_window_extent(renderer=fig.canvas.get_renderer()).width / fig.bbox.width
-    t.remove()
-    return w
-
-# ============================================================
-# HEADER
-# ============================================================
-
-def draw_header(fig, ax, time_class, ratings, color):
-    game_count = len(ratings)
-    latest_elo = ratings[-1]
-
-    ist = pytz.timezone("Asia/Kolkata")
-    time_main = datetime.now(ist).strftime("%-I:%M %p")
-    time_unit = " IST"
-
-    x_left  = get_visual_left_edge(fig, ax)
-    x_right = ax.get_position().x1
-
-    y_text = 1 - FIG_TOP_MARGIN + HEADER_Y_OFFSET
-    y_div  = 1 - FIG_TOP_MARGIN + DIVIDER_Y_OFFSET
-
-    cursor = x_left
-
-    # LEFT CLUSTER
-    fig.text(cursor, y_text, time_class.upper(),
-             fontsize=TEXT_FONT_SIZE, color=color, alpha=PRIMARY_OPACITY)
-    cursor += measure(fig, time_class.upper(), TEXT_FONT_SIZE)
-
-    fig.text(cursor + DOT_GAP/2, y_text, "·",
-             fontsize=DOT_FONT_SIZE, color=TEXT_COLOR, alpha=PRIMARY_OPACITY)
-    cursor += DOT_GAP
-
-    fig.text(cursor, y_text, "CHESS.COM",
-             fontsize=TEXT_FONT_SIZE, color=TEXT_COLOR, alpha=SECONDARY_OPACITY)
-
-    # RIGHT CLUSTER
-    parts = [
-        (str(game_count), color, PRIMARY_OPACITY),
-        (" GAMES", TEXT_COLOR, SECONDARY_OPACITY),
-        (" · ", TEXT_COLOR, PRIMARY_OPACITY),
-        (str(latest_elo), color, PRIMARY_OPACITY),
-        (" ELO", TEXT_COLOR, SECONDARY_OPACITY),
-        (" · ", TEXT_COLOR, PRIMARY_OPACITY),
-        (time_main, color, PRIMARY_OPACITY),
-        (time_unit, TEXT_COLOR, SECONDARY_OPACITY),
-    ]
-
-    total_width = sum(measure(fig, t, TEXT_FONT_SIZE) for t, _, _ in parts)
-    cursor = x_right - total_width
-
-    for text, col, op in parts:
-        fig.text(cursor, y_text, text,
-                 fontsize=TEXT_FONT_SIZE, color=col, alpha=op)
-        cursor += measure(fig, text, TEXT_FONT_SIZE)
-
-    # DIVIDER
-    fig.lines.append(
-        plt.Line2D([x_left, x_right], [y_div, y_div],
-                   transform=fig.transFigure,
-                   color=TEXT_COLOR, linewidth=1.2, alpha=0.8)
-    )
-
-# ============================================================
-# X-AXIS
-# ============================================================
-
-def draw_x_axis(fig, ax):
-    x_left  = get_visual_left_edge(fig, ax)
-    x_right = ax.get_position().x1
-    y = ax.get_position().y0
-
-    fig.lines.append(
-        plt.Line2D([x_left, x_right], [y, y],
-                   transform=fig.transFigure,
-                   color=TEXT_COLOR, linewidth=1.2, alpha=0.4)
-    )
 
 # ============================================================
 # RENDER
