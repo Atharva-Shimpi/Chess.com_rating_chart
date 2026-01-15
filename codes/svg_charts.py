@@ -81,7 +81,7 @@ DIVIDER_Y_OFFSET = 0.075
 TEXT_FONT_SIZE = 13
 DOT_FONT_SIZE  = 15
 
-DOT_GAP = 0.030
+DOT_GAP = 0.030  # stable, symmetric spacing around middle dots
 
 # ============================================================
 # DATA FETCHING
@@ -150,7 +150,27 @@ def style_axes(ax):
     ax.grid(False)
 
 # ============================================================
-# HEADER ENGINE
+# VISUAL EDGE CALCULATION
+# ============================================================
+
+def get_visual_left_edge(fig, ax):
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+
+    tick_extents = [
+        t.get_window_extent(renderer)
+        for t in ax.get_yticklabels()
+        if t.get_text()
+    ]
+
+    if not tick_extents:
+        return ax.get_position().x0
+
+    leftmost_px = min(e.x0 for e in tick_extents)
+    return leftmost_px / fig.bbox.width
+
+# ============================================================
+# HEADER + DIVIDER
 # ============================================================
 
 def measure(fig, text, size):
@@ -167,47 +187,53 @@ def draw_header(fig, ax, time_class, ratings, color):
     ist = pytz.timezone("Asia/Kolkata")
     time_str = datetime.now(ist).strftime("%-I:%M %p IST")
 
-    x_left  = ax.get_position().x0
-    x_right = 1 - FIG_RIGHT_MARGIN
-    y_text  = 1 - FIG_TOP_MARGIN + HEADER_Y_OFFSET
-    y_div   = 1 - FIG_TOP_MARGIN + DIVIDER_Y_OFFSET
+    x_left  = get_visual_left_edge(fig, ax)
+    x_right = ax.get_position().x1
 
-    # -------- LEFT CLUSTER --------
-    cursor = x_left
-    for i, (txt, col) in enumerate([
+    y_text = 1 - FIG_TOP_MARGIN + HEADER_Y_OFFSET
+    y_div  = 1 - FIG_TOP_MARGIN + DIVIDER_Y_OFFSET
+
+    # LEFT CLUSTER
+    left_parts = [
         (time_class.upper(), color),
         ("CHESS.COM", TEXT_COLOR),
-    ]):
+    ]
+
+    cursor = x_left
+    for i, (txt, col) in enumerate(left_parts):
         fig.text(cursor, y_text, txt, ha="left", va="center",
                  fontsize=TEXT_FONT_SIZE, color=col)
         cursor += measure(fig, txt, TEXT_FONT_SIZE)
-        if i == 0:
-            fig.text(cursor + DOT_GAP/2, y_text, "·",
+        if i < len(left_parts) - 1:
+            fig.text(cursor + DOT_GAP / 2, y_text, "·",
                      ha="center", va="center",
                      fontsize=DOT_FONT_SIZE, color=TEXT_COLOR)
             cursor += DOT_GAP
 
-    # -------- RIGHT CLUSTER --------
-    parts = [
+    # RIGHT CLUSTER
+    right_parts = [
         (f"{game_count} GAMES", color),
         (f"{latest_elo} ELO", color),
         (time_str, TEXT_COLOR),
     ]
 
-    total_width = sum(measure(fig, t, TEXT_FONT_SIZE) for t, _ in parts) + DOT_GAP * 2
+    total_width = sum(
+        measure(fig, t, TEXT_FONT_SIZE) for t, _ in right_parts
+    ) + DOT_GAP * (len(right_parts) - 1)
+
     cursor = x_right - total_width
 
-    for i, (txt, col) in enumerate(parts):
+    for i, (txt, col) in enumerate(right_parts):
         fig.text(cursor, y_text, txt, ha="left", va="center",
                  fontsize=TEXT_FONT_SIZE, color=col)
         cursor += measure(fig, txt, TEXT_FONT_SIZE)
-        if i < 2:
-            fig.text(cursor + DOT_GAP/2, y_text, "·",
+        if i < len(right_parts) - 1:
+            fig.text(cursor + DOT_GAP / 2, y_text, "·",
                      ha="center", va="center",
                      fontsize=DOT_FONT_SIZE, color=TEXT_COLOR)
             cursor += DOT_GAP
 
-    # -------- DIVIDER --------
+    # DIVIDER
     fig.lines.append(
         plt.Line2D(
             [x_left, x_right],
@@ -219,12 +245,19 @@ def draw_header(fig, ax, time_class, ratings, color):
         )
     )
 
-    # -------- X-AXIS LINE (MATCH DIVIDER WIDTH) --------
-    y_axis = ax.get_position().y0
+# ============================================================
+# X-AXIS (VISUALLY ALIGNED)
+# ============================================================
+
+def draw_x_axis(fig, ax):
+    x_left  = get_visual_left_edge(fig, ax)
+    x_right = ax.get_position().x1
+    y = ax.get_position().y0
+
     fig.lines.append(
         plt.Line2D(
             [x_left, x_right],
-            [y_axis, y_axis],
+            [y, y],
             transform=fig.transFigure,
             color=TEXT_COLOR,
             linewidth=1.0,
@@ -251,6 +284,7 @@ for time_class, cfg in TIME_CLASSES.items():
         plot_dotted_fill(ax, ratings, cfg["color"])
         style_axes(ax)
         draw_header(fig, ax, time_class, ratings, cfg["color"])
+        draw_x_axis(fig, ax)
     else:
         ax.text(0.5, 0.5, "NO DATA AVAILABLE", ha="center", va="center")
         ax.axis("off")
