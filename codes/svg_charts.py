@@ -81,8 +81,7 @@ DIVIDER_Y_OFFSET = 0.075
 TEXT_FONT_SIZE = 13
 DOT_FONT_SIZE  = 15
 
-TOKEN_GAP   = 0.006   # base spacing between all tokens
-DOT_PADDING = 0.012   # extra spacing on BOTH sides of middle dots (safe range: 0.010–0.018)
+DOT_GAP = 0.020   # controls space BEFORE and AFTER each middle dot (stable)
 
 # ============================================================
 # DATA FETCHING
@@ -151,14 +150,15 @@ def style_axes(ax):
     ax.grid(False)
 
 # ============================================================
-# HEADER ENGINE (SPACING-STABLE)
+# HEADER ENGINE (DOT-SAFE, PARAMETER-STABLE)
 # ============================================================
 
-def draw_token(fig, x, y, text, color, ha="left", size=TEXT_FONT_SIZE):
-    t = fig.text(x, y, text, ha=ha, va="center", fontsize=size, color=color)
+def measure(fig, text, size):
+    t = fig.text(0, 0, text, fontsize=size)
     fig.canvas.draw()
-    bbox = t.get_window_extent(renderer=fig.canvas.get_renderer())
-    return bbox.width / fig.bbox.width
+    w = t.get_window_extent(renderer=fig.canvas.get_renderer()).width / fig.bbox.width
+    t.remove()
+    return w
 
 def draw_header(fig, ax, time_class, ratings, color):
     game_count = len(ratings)
@@ -172,35 +172,40 @@ def draw_header(fig, ax, time_class, ratings, color):
     y_text  = 1 - FIG_TOP_MARGIN + HEADER_Y_OFFSET
     y_div   = 1 - FIG_TOP_MARGIN + DIVIDER_Y_OFFSET
 
-    left_tokens = [
-        (time_class.upper(), color, TEXT_FONT_SIZE),
-        ("·", TEXT_COLOR, DOT_FONT_SIZE),
-        ("CHESS.COM", TEXT_COLOR, TEXT_FONT_SIZE),
+    # -------- LEFT CLUSTER --------
+    left_parts = [
+        (time_class.upper(), color),
+        ("CHESS.COM", TEXT_COLOR),
     ]
 
-    right_tokens = [
-        (f"{game_count} GAMES", color, TEXT_FONT_SIZE),
-        ("·", TEXT_COLOR, DOT_FONT_SIZE),
-        (f"{latest_elo} ELO", color, TEXT_FONT_SIZE),
-        ("·", TEXT_COLOR, DOT_FONT_SIZE),
-        (time_str, TEXT_COLOR, TEXT_FONT_SIZE),
-    ]
-
-    # ---- LEFT CLUSTER ----
     cursor = x_left
-    for text, col, size in left_tokens:
-        w = draw_token(fig, cursor, y_text, text, col, size=size)
-        gap = TOKEN_GAP + (DOT_PADDING if text == "·" else 0)
-        cursor += w + gap
+    for i, (txt, col) in enumerate(left_parts):
+        fig.text(cursor, y_text, txt, ha="left", va="center", fontsize=TEXT_FONT_SIZE, color=col)
+        cursor += measure(fig, txt, TEXT_FONT_SIZE)
+        if i < len(left_parts) - 1:
+            fig.text(cursor + DOT_GAP/2, y_text, "·", ha="center", va="center",
+                     fontsize=DOT_FONT_SIZE, color=TEXT_COLOR)
+            cursor += DOT_GAP
 
-    # ---- RIGHT CLUSTER ----
-    cursor = x_right
-    for text, col, size in reversed(right_tokens):
-        w = draw_token(fig, cursor, y_text, text, col, ha="right", size=size)
-        gap = TOKEN_GAP + (DOT_PADDING if text == "·" else 0)
-        cursor -= w + gap
+    # -------- RIGHT CLUSTER --------
+    right_parts = [
+        (f"{game_count} GAMES", color),
+        (f"{latest_elo} ELO", color),
+        (time_str, TEXT_COLOR),
+    ]
 
-    # ---- DIVIDER ----
+    total_width = sum(measure(fig, t, TEXT_FONT_SIZE) for t, _ in right_parts) + DOT_GAP * (len(right_parts) - 1)
+    cursor = x_right - total_width
+
+    for i, (txt, col) in enumerate(right_parts):
+        fig.text(cursor, y_text, txt, ha="left", va="center", fontsize=TEXT_FONT_SIZE, color=col)
+        cursor += measure(fig, txt, TEXT_FONT_SIZE)
+        if i < len(right_parts) - 1:
+            fig.text(cursor + DOT_GAP/2, y_text, "·", ha="center", va="center",
+                     fontsize=DOT_FONT_SIZE, color=TEXT_COLOR)
+            cursor += DOT_GAP
+
+    # -------- DIVIDER --------
     fig.lines.append(
         plt.Line2D(
             [x_left, x_right],
