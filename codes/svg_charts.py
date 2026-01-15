@@ -7,7 +7,6 @@ import pytz
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
 
 # ============================================================
 # FILE SYSTEM
@@ -22,7 +21,6 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 BG_COLOR = "#F6F4EF"       # Ivory background
 TEXT_COLOR = "#2A2529"    # Charcoal text / axis color
-MUTED_TEXT = "#6B6460"    # Secondary editorial text
 
 matplotlib.rcParams.update({
     "figure.facecolor": BG_COLOR,
@@ -55,7 +53,7 @@ TIME_CLASSES = {
 }
 
 # ============================================================
-# DATA → AXIS GEOMETRY
+# AXIS GEOMETRY (DO NOT TIE TO MARGINS)
 # ============================================================
 
 X_AXIS_LEFT_PADDING = 2
@@ -64,7 +62,7 @@ X_AXIS_RIGHT_PADDING = 1
 FLOAT_GAP_RATIO = 0.16
 TOP_PADDING_RATIO = 0.15
 
-DOT_DIAMETER_Y = 6
+DOT_DIAMETER_Y = 6  # semantic vertical diameter in rating units
 
 # ============================================================
 # PHASE 5 — EDITORIAL LAYOUT MARGINS
@@ -72,21 +70,9 @@ DOT_DIAMETER_Y = 6
 
 FIG_LEFT_MARGIN   = 0.075
 FIG_RIGHT_MARGIN  = 0.045
+
 FIG_BOTTOM_MARGIN = 0.10
 FIG_TOP_MARGIN    = 0.30
-
-# ============================================================
-# PHASE 6 — HEADER CONTROL
-# ============================================================
-
-HEADER_FONT_SIZE = 13
-DIVIDER_ALPHA = 0.45
-DIVIDER_LINEWIDTH = 1.2
-
-HEADER_Y_OFFSET = 0.055     # distance from top of axes bbox
-DIVIDER_Y_OFFSET = 0.035
-
-HEADER_DOT_SPACING = "   "
 
 # ============================================================
 # DATA FETCHING
@@ -128,8 +114,9 @@ def get_ratings(time_class):
 
     return ratings[::-1]
 
+
 # ============================================================
-# DOTTED GRAPH
+# DOTTED GRAPH RENDERING
 # ============================================================
 
 def plot_dotted_fill(ax, ratings, color):
@@ -159,7 +146,10 @@ def plot_dotted_fill(ax, ratings, color):
         )
 
     ax.set_ylim(axis_floor, axis_ceiling)
-    ax.set_xlim(-X_AXIS_LEFT_PADDING, len(ratings) + X_AXIS_RIGHT_PADDING)
+    ax.set_xlim(
+        -X_AXIS_LEFT_PADDING,
+        len(ratings) + X_AXIS_RIGHT_PADDING
+    )
 
     yticks = np.linspace(
         visual_dot_base + DOT_DIAMETER_Y,
@@ -167,6 +157,7 @@ def plot_dotted_fill(ax, ratings, color):
         6
     )
     ax.set_yticks([int(round(y)) for y in yticks])
+
 
 # ============================================================
 # AXIS STYLING
@@ -185,8 +176,56 @@ def style_axes(ax):
 
     ax.grid(False)
 
+
 # ============================================================
-# RENDER
+# PHASE 6 — HEADER BLOCK (FIGURE LEVEL)
+# ============================================================
+
+def draw_header(fig, time_class, ratings, color):
+    game_count = len(ratings)
+    latest_elo = ratings[-1]
+
+    ist = pytz.timezone("Asia/Kolkata")
+    now = datetime.now(ist)
+    time_str = now.strftime("%-I:%M %p IST")
+
+    # Left cluster
+    fig.text(
+        FIG_LEFT_MARGIN,
+        1 - FIG_TOP_MARGIN + 0.09,
+        f"{time_class.upper()} – CHESS.COM",
+        ha="left",
+        va="center",
+        fontsize=13,
+        color=color
+    )
+
+    # Right cluster
+    fig.text(
+        1 - FIG_RIGHT_MARGIN,
+        1 - FIG_TOP_MARGIN + 0.09,
+        f"{game_count} GAMES   {latest_elo} ELO   {time_str}",
+        ha="right",
+        va="center",
+        fontsize=13,
+        color=color
+    )
+
+    # Divider
+    fig.lines.append(
+        plt.Line2D(
+            [FIG_LEFT_MARGIN, 1 - FIG_RIGHT_MARGIN],
+            [1 - FIG_TOP_MARGIN + 0.05] * 2,
+            transform=fig.transFigure,
+            color=TEXT_COLOR,
+            linewidth=1.2,
+            alpha=0.6
+        )
+    )
+
+
+# ============================================================
+# RENDER ALL CHARTS
 # ============================================================
 
 for time_class, cfg in TIME_CLASSES.items():
@@ -201,64 +240,7 @@ for time_class, cfg in TIME_CLASSES.items():
         top=1 - FIG_TOP_MARGIN
     )
 
-    if ratings:
-        plot_dotted_fill(ax, ratings, cfg["color"])
-        style_axes(ax)
-
-        # ----------------------------------------------------
-        # HEADER GEOMETRY (ALIGNED TO AXES, NOT MARGINS)
-        # ----------------------------------------------------
-
-        fig.canvas.draw()
-        bbox = ax.get_position()
-
-        header_y = bbox.y1 + HEADER_Y_OFFSET
-        divider_y = bbox.y1 + DIVIDER_Y_OFFSET
-
-        # Left cluster
-        fig.text(
-            bbox.x0,
-            header_y,
-            f"{time_class.upper()} – CHESS.COM",
-            ha="left",
-            va="center",
-            fontsize=HEADER_FONT_SIZE,
-            color=MUTED_TEXT
-        )
-
-        # Right cluster
-        tz = pytz.timezone("Asia/Kolkata")
-        now = datetime.now(tz).strftime("%-I:%M %p IST")
-
-        right_cluster = (
-            f"{len(ratings)} GAMES"
-            f"{HEADER_DOT_SPACING}·{HEADER_DOT_SPACING}"
-            f"{ratings[-1]} ELO"
-            f"{HEADER_DOT_SPACING}·{HEADER_DOT_SPACING}"
-            f"{now}"
-        )
-
-        fig.text(
-            bbox.x1,
-            header_y,
-            right_cluster,
-            ha="right",
-            va="center",
-            fontsize=HEADER_FONT_SIZE,
-            color=cfg["color"]
-        )
-
-        # Divider
-        fig.add_artist(Line2D(
-            [bbox.x0, bbox.x1],
-            [divider_y, divider_y],
-            transform=fig.transFigure,
-            linewidth=DIVIDER_LINEWIDTH,
-            alpha=DIVIDER_ALPHA,
-            color=TEXT_COLOR
-        ))
-
-    else:
+    if not ratings:
         ax.text(
             0.5, 0.5,
             "NO DATA AVAILABLE",
@@ -267,6 +249,10 @@ for time_class, cfg in TIME_CLASSES.items():
             fontsize=14
         )
         ax.axis("off")
+    else:
+        plot_dotted_fill(ax, ratings, cfg["color"])
+        style_axes(ax)
+        draw_header(fig, time_class, ratings, cfg["color"])
 
     plt.savefig(
         f"{OUTPUT_DIR}/rating-{time_class}.svg",
