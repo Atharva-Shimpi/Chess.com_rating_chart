@@ -81,7 +81,8 @@ DIVIDER_Y_OFFSET = 0.075
 TEXT_FONT_SIZE = 13
 DOT_FONT_SIZE  = 15
 
-TOKEN_GAP = 0.006   # 🔒 single source of truth for spacing
+TOKEN_GAP = 0.006        # base spacing between tokens
+DOT_EXTRA_GAP = 0.010   # extra spacing before & after middle dots
 
 # ============================================================
 # DATA FETCHING
@@ -150,7 +151,7 @@ def style_axes(ax):
     ax.grid(False)
 
 # ============================================================
-# HEADER ENGINE (SPACING FIXED)
+# HEADER ENGINE (DOT-SPACING SAFE)
 # ============================================================
 
 def draw_token(fig, x, y, text, color, ha="left", size=TEXT_FONT_SIZE):
@@ -174,25 +175,25 @@ def draw_header(fig, ax, time_class, ratings, color):
 
     # ---- LEFT CLUSTER ----
     cursor = x_left
-    for text, col, size in [
-        (time_class.upper(), color, TEXT_FONT_SIZE),
-        ("·", TEXT_COLOR, DOT_FONT_SIZE),
-        ("CHESS.COM", TEXT_COLOR, TEXT_FONT_SIZE),
+    for text, col, size, is_dot in [
+        (time_class.upper(), color, TEXT_FONT_SIZE, False),
+        ("·", TEXT_COLOR, DOT_FONT_SIZE, True),
+        ("CHESS.COM", TEXT_COLOR, TEXT_FONT_SIZE, False),
     ]:
         w = draw_token(fig, cursor, y_text, text, col, size=size)
-        cursor += w + TOKEN_GAP
+        cursor += w + TOKEN_GAP + (DOT_EXTRA_GAP if is_dot else 0)
 
     # ---- RIGHT CLUSTER ----
     cursor = x_right
-    for text, col, size in reversed([
-        (f"{game_count} GAMES", color, TEXT_FONT_SIZE),
-        ("·", TEXT_COLOR, DOT_FONT_SIZE),
-        (f"{latest_elo} ELO", color, TEXT_FONT_SIZE),
-        ("·", TEXT_COLOR, DOT_FONT_SIZE),
-        (time_str, TEXT_COLOR, TEXT_FONT_SIZE),
+    for text, col, size, is_dot in reversed([
+        (f"{game_count} GAMES", color, TEXT_FONT_SIZE, False),
+        ("·", TEXT_COLOR, DOT_FONT_SIZE, True),
+        (f"{latest_elo} ELO", color, TEXT_FONT_SIZE, False),
+        ("·", TEXT_COLOR, DOT_FONT_SIZE, True),
+        (time_str, TEXT_COLOR, TEXT_FONT_SIZE, False),
     ]):
         w = draw_token(fig, cursor, y_text, text, col, ha="right", size=size)
-        cursor -= w + TOKEN_GAP
+        cursor -= w + TOKEN_GAP + (DOT_EXTRA_GAP if is_dot else 0)
 
     # ---- DIVIDER ----
     fig.lines.append(
