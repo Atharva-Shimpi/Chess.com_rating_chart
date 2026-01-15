@@ -79,11 +79,11 @@ HEADER_Y_OFFSET  = 0.135
 DIVIDER_Y_OFFSET = 0.075
 
 TEXT_FONT_SIZE = 13
-DOT_FONT_SIZE  = 16      # slightly larger middle dot
-DOT_GAP        = 0.032   # spacing around middle dot
+DOT_FONT_SIZE  = 18      # slightly larger middle dot
+DOT_GAP        = 0.045   # spacing around middle dot
 
 PRIMARY_OPACITY   = 1.0
-SECONDARY_OPACITY = 0.6
+SECONDARY_OPACITY = 0.5
 
 # ============================================================
 # DATA FETCHING
