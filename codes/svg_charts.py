@@ -52,7 +52,7 @@ TIME_CLASSES = {
 }
 
 # ============================================================
-# AXIS GEOMETRY (INDEPENDENT OF MARGINS)
+# AXIS GEOMETRY
 # ============================================================
 
 X_AXIS_LEFT_PADDING = 2
@@ -63,7 +63,7 @@ TOP_PADDING_RATIO = 0.15
 DOT_DIAMETER_Y = 6
 
 # ============================================================
-# PHASE 5 — EDITORIAL LAYOUT MARGINS
+# LAYOUT MARGINS
 # ============================================================
 
 FIG_LEFT_MARGIN   = 0.075
@@ -72,14 +72,16 @@ FIG_BOTTOM_MARGIN = 0.10
 FIG_TOP_MARGIN    = 0.30
 
 # ============================================================
-# PHASE 6 — HEADER CONSTANTS
+# HEADER CONSTANTS
 # ============================================================
 
 HEADER_Y_OFFSET  = 0.12
-DIVIDER_Y_OFFSET = 0.085
+DIVIDER_Y_OFFSET = 0.075
 
 TEXT_FONT_SIZE = 13
-DOT_FONT_SIZE  = 15   # slightly larger middle dots
+DOT_FONT_SIZE  = 15
+
+TOKEN_GAP = 0.006   # 🔒 single source of truth for spacing
 
 # ============================================================
 # DATA FETCHING
@@ -114,7 +116,7 @@ def get_ratings(time_class):
     return ratings[::-1]
 
 # ============================================================
-# DOTTED GRAPH
+# PLOT
 # ============================================================
 
 def plot_dotted_fill(ax, ratings, color):
@@ -148,7 +150,7 @@ def style_axes(ax):
     ax.grid(False)
 
 # ============================================================
-# HEADER TOKEN LAYOUT ENGINE (FIXED)
+# HEADER ENGINE (SPACING FIXED)
 # ============================================================
 
 def draw_token(fig, x, y, text, color, ha="left", size=TEXT_FONT_SIZE):
@@ -156,7 +158,7 @@ def draw_token(fig, x, y, text, color, ha="left", size=TEXT_FONT_SIZE):
     fig.canvas.draw()
     bbox = t.get_window_extent(renderer=fig.canvas.get_renderer())
     width = bbox.width / fig.bbox.width
-    return t, width
+    return width
 
 def draw_header(fig, ax, time_class, ratings, color):
     game_count = len(ratings)
@@ -172,25 +174,25 @@ def draw_header(fig, ax, time_class, ratings, color):
 
     # ---- LEFT CLUSTER ----
     cursor = x_left
-    for token, col, size in [
+    for text, col, size in [
         (time_class.upper(), color, TEXT_FONT_SIZE),
-        (" · ", TEXT_COLOR, DOT_FONT_SIZE),
+        ("·", TEXT_COLOR, DOT_FONT_SIZE),
         ("CHESS.COM", TEXT_COLOR, TEXT_FONT_SIZE),
     ]:
-        _, w = draw_token(fig, cursor, y_text, token, col, size=size)
-        cursor += w
+        w = draw_token(fig, cursor, y_text, text, col, size=size)
+        cursor += w + TOKEN_GAP
 
-    # ---- RIGHT CLUSTER (RIGHT-ALIGNED FLOW) ----
+    # ---- RIGHT CLUSTER ----
     cursor = x_right
-    for token, col, size in reversed([
+    for text, col, size in reversed([
         (f"{game_count} GAMES", color, TEXT_FONT_SIZE),
-        (" · ", TEXT_COLOR, DOT_FONT_SIZE),
+        ("·", TEXT_COLOR, DOT_FONT_SIZE),
         (f"{latest_elo} ELO", color, TEXT_FONT_SIZE),
-        (" · ", TEXT_COLOR, DOT_FONT_SIZE),
+        ("·", TEXT_COLOR, DOT_FONT_SIZE),
         (time_str, TEXT_COLOR, TEXT_FONT_SIZE),
     ]):
-        _, w = draw_token(fig, cursor, y_text, token, col, ha="right", size=size)
-        cursor -= w
+        w = draw_token(fig, cursor, y_text, text, col, ha="right", size=size)
+        cursor -= w + TOKEN_GAP
 
     # ---- DIVIDER ----
     fig.lines.append(
