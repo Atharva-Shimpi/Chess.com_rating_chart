@@ -20,7 +20,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # ============================================================
 
 BG_COLOR = "#F6F4EF"
-TEXT_COLOR = "#2A2529"
+TEXT_COLOR = "#1F1F1F"   # near-black / charcoal
 
 matplotlib.rcParams.update({
     "figure.facecolor": BG_COLOR,
@@ -79,9 +79,8 @@ HEADER_Y_OFFSET  = 0.135
 DIVIDER_Y_OFFSET = 0.075
 
 TEXT_FONT_SIZE = 13
-DOT_FONT_SIZE  = 15
-
-DOT_GAP = 0.030
+DOT_FONT_SIZE  = 16      # slightly larger middle dot
+DOT_GAP        = 0.032   # spacing around middle dot
 
 PRIMARY_OPACITY   = 1.0
 SECONDARY_OPACITY = 0.6
@@ -181,7 +180,8 @@ def draw_header(fig, ax, time_class, ratings, color):
     latest_elo = ratings[-1]
 
     ist = pytz.timezone("Asia/Kolkata")
-    time_str = datetime.now(ist).strftime("%-I:%M %p IST")
+    time_main = datetime.now(ist).strftime("%-I:%M %p")
+    time_unit = " IST"
 
     x_left  = get_visual_left_edge(fig, ax)
     x_right = ax.get_position().x1
@@ -211,7 +211,8 @@ def draw_header(fig, ax, time_class, ratings, color):
         (str(latest_elo), color, PRIMARY_OPACITY),
         (" ELO", TEXT_COLOR, SECONDARY_OPACITY),
         (" · ", TEXT_COLOR, PRIMARY_OPACITY),
-        (time_str, TEXT_COLOR, SECONDARY_OPACITY),
+        (time_main, color, PRIMARY_OPACITY),
+        (time_unit, TEXT_COLOR, SECONDARY_OPACITY),
     ]
 
     total_width = sum(measure(fig, t, TEXT_FONT_SIZE) for t, _, _ in parts)
