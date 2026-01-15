@@ -20,7 +20,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # ============================================================
 
 BG_COLOR = "#F6F4EF"       # Ivory background
-TEXT_COLOR = "#2A2529"    # Charcoal text / axis color
+TEXT_COLOR = "#2A2529"    # Neutral charcoal
 
 matplotlib.rcParams.update({
     "figure.facecolor": BG_COLOR,
@@ -53,7 +53,7 @@ TIME_CLASSES = {
 }
 
 # ============================================================
-# AXIS GEOMETRY (DO NOT TIE TO MARGINS)
+# AXIS GEOMETRY (INDEPENDENT OF MARGINS)
 # ============================================================
 
 X_AXIS_LEFT_PADDING = 2
@@ -65,7 +65,7 @@ TOP_PADDING_RATIO = 0.15
 DOT_DIAMETER_Y = 6  # semantic vertical diameter in rating units
 
 # ============================================================
-# PHASE 5 — EDITORIAL LAYOUT MARGINS
+# EDITORIAL LAYOUT MARGINS (PHASE 5)
 # ============================================================
 
 FIG_LEFT_MARGIN   = 0.075
@@ -73,6 +73,13 @@ FIG_RIGHT_MARGIN  = 0.045
 
 FIG_BOTTOM_MARGIN = 0.10
 FIG_TOP_MARGIN    = 0.30
+
+# Align header with y-tick labels (visual gutter)
+Y_LABEL_GUTTER = 0.018
+
+# Header vertical rhythm
+HEADER_TEXT_Y    = 1 - FIG_TOP_MARGIN + 0.12
+HEADER_DIVIDER_Y = 1 - FIG_TOP_MARGIN + 0.075
 
 # ============================================================
 # DATA FETCHING
@@ -186,25 +193,87 @@ def draw_header(fig, time_class, ratings, color):
     latest_elo = ratings[-1]
 
     ist = pytz.timezone("Asia/Kolkata")
-    now = datetime.now(ist)
-    time_str = now.strftime("%-I:%M %p IST")
+    time_str = datetime.now(ist).strftime("%-I:%M %p IST")
 
-    # Left cluster
+    header_left_x = FIG_LEFT_MARGIN + Y_LABEL_GUTTER
+    header_right_x = 1 - FIG_RIGHT_MARGIN
+
+    # Left cluster: MODE · CHESS.COM
     fig.text(
-        FIG_LEFT_MARGIN,
-        1 - FIG_TOP_MARGIN + 0.09,
-        f"{time_class.upper()} – CHESS.COM",
+        header_left_x,
+        HEADER_TEXT_Y,
+        f"{time_class.upper()}",
         ha="left",
         va="center",
         fontsize=13,
         color=color
     )
 
-    # Right cluster
     fig.text(
-        1 - FIG_RIGHT_MARGIN,
-        1 - FIG_TOP_MARGIN + 0.09,
-        f"{game_count} GAMES   {latest_elo} ELO   {time_str}",
+        header_left_x + 0.06,
+        HEADER_TEXT_Y,
+        " · ",
+        ha="left",
+        va="center",
+        fontsize=13,
+        color=TEXT_COLOR
+    )
+
+    fig.text(
+        header_left_x + 0.075,
+        HEADER_TEXT_Y,
+        "CHESS.COM",
+        ha="left",
+        va="center",
+        fontsize=13,
+        color=TEXT_COLOR
+    )
+
+    # Right cluster: GAMES · ELO · TIME
+    fig.text(
+        header_right_x,
+        HEADER_TEXT_Y,
+        f"{time_str}",
+        ha="right",
+        va="center",
+        fontsize=13,
+        color=color
+    )
+
+    fig.text(
+        header_right_x - 0.13,
+        HEADER_TEXT_Y,
+        " · ",
+        ha="right",
+        va="center",
+        fontsize=13,
+        color=TEXT_COLOR
+    )
+
+    fig.text(
+        header_right_x - 0.16,
+        HEADER_TEXT_Y,
+        f"{latest_elo} ELO",
+        ha="right",
+        va="center",
+        fontsize=13,
+        color=color
+    )
+
+    fig.text(
+        header_right_x - 0.29,
+        HEADER_TEXT_Y,
+        " · ",
+        ha="right",
+        va="center",
+        fontsize=13,
+        color=TEXT_COLOR
+    )
+
+    fig.text(
+        header_right_x - 0.32,
+        HEADER_TEXT_Y,
+        f"{game_count} GAMES",
         ha="right",
         va="center",
         fontsize=13,
@@ -214,12 +283,12 @@ def draw_header(fig, time_class, ratings, color):
     # Divider
     fig.lines.append(
         plt.Line2D(
-            [FIG_LEFT_MARGIN, 1 - FIG_RIGHT_MARGIN],
-            [1 - FIG_TOP_MARGIN + 0.05] * 2,
+            [header_left_x, header_right_x],
+            [HEADER_DIVIDER_Y, HEADER_DIVIDER_Y],
             transform=fig.transFigure,
             color=TEXT_COLOR,
-            linewidth=1.2,
-            alpha=0.6
+            linewidth=1.4,
+            alpha=0.7
         )
     )
 
