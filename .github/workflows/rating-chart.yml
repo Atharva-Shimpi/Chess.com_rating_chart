@@ -30,8 +30,8 @@ jobs:
           python-version: "3.12.8"
 
       - name: Verify requirements file
-        working-directory: Chess.com_rating_chart
         run: |
+          ls -la
           test -f requirements.txt
 
       - name: Install dependencies
