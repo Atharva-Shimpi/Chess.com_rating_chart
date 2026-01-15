@@ -81,7 +81,7 @@ DIVIDER_Y_OFFSET = 0.075
 TEXT_FONT_SIZE = 13
 DOT_FONT_SIZE  = 15
 
-DOT_GAP = 0.020   # controls space BEFORE and AFTER each middle dot (stable)
+DOT_GAP = 0.040   # controls space BEFORE and AFTER each middle dot (stable)
 
 # ============================================================
 # DATA FETCHING
