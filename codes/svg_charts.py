@@ -1,10 +1,13 @@
 import os
 import requests
 import numpy as np
+from datetime import datetime
+import pytz
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 
 # ============================================================
 # FILE SYSTEM
@@ -19,6 +22,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 BG_COLOR = "#F6F4EF"       # Ivory background
 TEXT_COLOR = "#2A2529"    # Charcoal text / axis color
+MUTED_TEXT = "#6B6460"    # Secondary editorial text
 
 matplotlib.rcParams.update({
     "figure.facecolor": BG_COLOR,
@@ -51,7 +55,7 @@ TIME_CLASSES = {
 }
 
 # ============================================================
-# DATA → AXIS GEOMETRY (DO NOT TIE TO MARGINS)
+# DATA → AXIS GEOMETRY
 # ============================================================
 
 X_AXIS_LEFT_PADDING = 2
@@ -72,11 +76,16 @@ FIG_BOTTOM_MARGIN = 0.10
 FIG_TOP_MARGIN    = 0.30
 
 # ============================================================
-# PHASE 6 — HEADER TYPOGRAPHY CONTROL
+# PHASE 6 — HEADER CONTROL
 # ============================================================
 
-# Space around middle dot separators in header
-# Recommended range: 2–4 spaces
+HEADER_FONT_SIZE = 13
+DIVIDER_ALPHA = 0.45
+DIVIDER_LINEWIDTH = 1.2
+
+HEADER_Y_OFFSET = 0.055     # distance from top of axes bbox
+DIVIDER_Y_OFFSET = 0.035
+
 HEADER_DOT_SPACING = "   "
 
 # ============================================================
@@ -120,7 +129,7 @@ def get_ratings(time_class):
     return ratings[::-1]
 
 # ============================================================
-# DOTTED GRAPH RENDERING
+# DOTTED GRAPH
 # ============================================================
 
 def plot_dotted_fill(ax, ratings, color):
@@ -150,10 +159,7 @@ def plot_dotted_fill(ax, ratings, color):
         )
 
     ax.set_ylim(axis_floor, axis_ceiling)
-    ax.set_xlim(
-        -X_AXIS_LEFT_PADDING,
-        len(ratings) + X_AXIS_RIGHT_PADDING
-    )
+    ax.set_xlim(-X_AXIS_LEFT_PADDING, len(ratings) + X_AXIS_RIGHT_PADDING)
 
     yticks = np.linspace(
         visual_dot_base + DOT_DIAMETER_Y,
@@ -180,7 +186,7 @@ def style_axes(ax):
     ax.grid(False)
 
 # ============================================================
-# RENDER ALL CHARTS
+# RENDER
 # ============================================================
 
 for time_class, cfg in TIME_CLASSES.items():
@@ -199,35 +205,58 @@ for time_class, cfg in TIME_CLASSES.items():
         plot_dotted_fill(ax, ratings, cfg["color"])
         style_axes(ax)
 
-        header_text = (
-            f"{time_class.upper()} – CHESS.COM"
+        # ----------------------------------------------------
+        # HEADER GEOMETRY (ALIGNED TO AXES, NOT MARGINS)
+        # ----------------------------------------------------
+
+        fig.canvas.draw()
+        bbox = ax.get_position()
+
+        header_y = bbox.y1 + HEADER_Y_OFFSET
+        divider_y = bbox.y1 + DIVIDER_Y_OFFSET
+
+        # Left cluster
+        fig.text(
+            bbox.x0,
+            header_y,
+            f"{time_class.upper()} – CHESS.COM",
+            ha="left",
+            va="center",
+            fontsize=HEADER_FONT_SIZE,
+            color=MUTED_TEXT
         )
+
+        # Right cluster
+        tz = pytz.timezone("Asia/Kolkata")
+        now = datetime.now(tz).strftime("%-I:%M %p IST")
 
         right_cluster = (
             f"{len(ratings)} GAMES"
             f"{HEADER_DOT_SPACING}·{HEADER_DOT_SPACING}"
             f"{ratings[-1]} ELO"
+            f"{HEADER_DOT_SPACING}·{HEADER_DOT_SPACING}"
+            f"{now}"
         )
 
-        ax.text(
-            0.0, 1.08,
-            header_text,
-            transform=ax.transAxes,
-            fontsize=13,
-            ha="left",
-            va="bottom",
-            color=cfg["color"]
-        )
-
-        ax.text(
-            1.0, 1.08,
+        fig.text(
+            bbox.x1,
+            header_y,
             right_cluster,
-            transform=ax.transAxes,
-            fontsize=13,
             ha="right",
-            va="bottom",
+            va="center",
+            fontsize=HEADER_FONT_SIZE,
             color=cfg["color"]
         )
+
+        # Divider
+        fig.add_artist(Line2D(
+            [bbox.x0, bbox.x1],
+            [divider_y, divider_y],
+            transform=fig.transFigure,
+            linewidth=DIVIDER_LINEWIDTH,
+            alpha=DIVIDER_ALPHA,
+            color=TEXT_COLOR
+        ))
 
     else:
         ax.text(
