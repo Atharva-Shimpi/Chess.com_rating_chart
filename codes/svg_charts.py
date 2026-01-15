@@ -75,13 +75,13 @@ FIG_TOP_MARGIN    = 0.30
 # HEADER CONSTANTS
 # ============================================================
 
-HEADER_Y_OFFSET  = 0.12
-DIVIDER_Y_OFFSET = 0.075
+HEADER_Y_OFFSET  = 0.135        # increasing --> header text moves upward , [0.09 - 0.15]
+DIVIDER_Y_OFFSET = 0.075       # increasing --> divider moves upward , [0.05 - 0.09]
 
 TEXT_FONT_SIZE = 13
 DOT_FONT_SIZE  = 15
 
-DOT_GAP = 0.080   # controls space BEFORE and AFTER each middle dot (stable)
+DOT_GAP = 0.030   # controls space BEFORE and AFTER each middle dot (stable)
 
 # ============================================================
 # DATA FETCHING
