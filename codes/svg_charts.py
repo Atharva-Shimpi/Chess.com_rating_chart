@@ -75,7 +75,7 @@ FIG_TOP_MARGIN    = 0.30
 # HEADER CONSTANTS
 # ============================================================
 
-HEADER_Y_OFFSET  = 0.192
+HEADER_Y_OFFSET  = 0.132
 DIVIDER_Y_OFFSET = 0.096
 
 TEXT_FONT_SIZE = 13
