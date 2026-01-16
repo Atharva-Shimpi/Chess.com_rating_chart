@@ -79,8 +79,8 @@ HEADER_Y_OFFSET  = 0.135
 DIVIDER_Y_OFFSET = 0.075
 
 TEXT_FONT_SIZE = 13
-DOT_FONT_SIZE  = 18      # middle dot size
-DOT_GAP        = 0.045   # spacing around dot
+DOT_FONT_SIZE  = 20      # middle dot size
+DOT_GAP        = 0.06    # spacing around dot (robust)
 
 PRIMARY_OPACITY   = 1.0
 SECONDARY_OPACITY = 0.6
@@ -129,7 +129,7 @@ def measure(fig, text, size):
     return w
 
 # ============================================================
-# VISUAL EDGE
+# VISUAL LEFT EDGE
 # ============================================================
 
 def get_visual_left_edge(fig, ax):
@@ -139,16 +139,32 @@ def get_visual_left_edge(fig, ax):
     return min(e.x0 for e in extents) / fig.bbox.width if extents else ax.get_position().x0
 
 # ============================================================
-# HEADER DOT
+# INLINE HEADER RENDERER (ROBUST)
 # ============================================================
 
-def draw_middle_dot(fig, x, y):
-    fig.text(
-        x, y, "·",
-        fontsize=DOT_FONT_SIZE,
-        color=TEXT_COLOR,
-        alpha=PRIMARY_OPACITY
-    )
+def draw_inline(fig, start_x, y, elements):
+    cursor = start_x
+
+    for text, color, opacity in elements:
+        if text == "DOT":
+            cursor += DOT_GAP / 2
+            fig.text(
+                cursor, y, "·",
+                fontsize=DOT_FONT_SIZE,
+                color=TEXT_COLOR,
+                alpha=PRIMARY_OPACITY
+            )
+            cursor += DOT_GAP / 2
+        else:
+            fig.text(
+                cursor, y, text,
+                fontsize=TEXT_FONT_SIZE,
+                color=color,
+                alpha=opacity
+            )
+            cursor += measure(fig, text, TEXT_FONT_SIZE)
+
+    return cursor
 
 # ============================================================
 # HEADER
@@ -168,22 +184,17 @@ def draw_header(fig, ax, time_class, ratings, color):
     y_text = 1 - FIG_TOP_MARGIN + HEADER_Y_OFFSET
     y_div  = 1 - FIG_TOP_MARGIN + DIVIDER_Y_OFFSET
 
-    cursor = x_left
+    # LEFT CLUSTER (uses same engine as right)
+    left_elements = [
+        (time_class.upper(), color, PRIMARY_OPACITY),
+        ("DOT", None, None),
+        ("CHESS.COM", TEXT_COLOR, SECONDARY_OPACITY),
+    ]
 
-    # LEFT CLUSTER
-    fig.text(cursor, y_text, time_class.upper(),
-             fontsize=TEXT_FONT_SIZE, color=color, alpha=PRIMARY_OPACITY)
-    cursor += measure(fig, time_class.upper(), TEXT_FONT_SIZE)
+    draw_inline(fig, x_left, y_text, left_elements)
 
-    cursor += DOT_GAP / 2
-    draw_middle_dot(fig, cursor, y_text)
-    cursor += DOT_GAP
-
-    fig.text(cursor, y_text, "CHESS.COM",
-             fontsize=TEXT_FONT_SIZE, color=TEXT_COLOR, alpha=SECONDARY_OPACITY)
-
-    # RIGHT CLUSTER (fully parameterized)
-    elements = [
+    # RIGHT CLUSTER
+    right_elements = [
         (str(game_count), color, PRIMARY_OPACITY),
         (" GAMES", TEXT_COLOR, SECONDARY_OPACITY),
         ("DOT", None, None),
@@ -195,29 +206,20 @@ def draw_header(fig, ax, time_class, ratings, color):
     ]
 
     total_width = 0
-    for text, _, _ in elements:
-        if text == "DOT":
-            total_width += DOT_GAP
-        else:
-            total_width += measure(fig, text, TEXT_FONT_SIZE)
+    for t, _, _ in right_elements:
+        total_width += DOT_GAP if t == "DOT" else measure(fig, t, TEXT_FONT_SIZE)
 
-    cursor = x_right - total_width
-
-    for text, col, op in elements:
-        if text == "DOT":
-            cursor += DOT_GAP / 2
-            draw_middle_dot(fig, cursor, y_text)
-            cursor += DOT_GAP / 2
-        else:
-            fig.text(cursor, y_text, text,
-                     fontsize=TEXT_FONT_SIZE, color=col, alpha=op)
-            cursor += measure(fig, text, TEXT_FONT_SIZE)
+    draw_inline(fig, x_right - total_width, y_text, right_elements)
 
     # DIVIDER
     fig.lines.append(
-        plt.Line2D([x_left, x_right], [y_div, y_div],
-                   transform=fig.transFigure,
-                   color=TEXT_COLOR, linewidth=1.2, alpha=0.8)
+        plt.Line2D(
+            [x_left, x_right], [y_div, y_div],
+            transform=fig.transFigure,
+            color=TEXT_COLOR,
+            linewidth=1.2,
+            alpha=0.8
+        )
     )
 
 # ============================================================
@@ -230,9 +232,13 @@ def draw_x_axis(fig, ax):
     y = ax.get_position().y0
 
     fig.lines.append(
-        plt.Line2D([x_left, x_right], [y, y],
-                   transform=fig.transFigure,
-                   color=TEXT_COLOR, linewidth=1.2, alpha=0.4)
+        plt.Line2D(
+            [x_left, x_right], [y, y],
+            transform=fig.transFigure,
+            color=TEXT_COLOR,
+            linewidth=1.2,
+            alpha=0.4
+        )
     )
 
 # ============================================================
