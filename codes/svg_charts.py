@@ -79,8 +79,8 @@ HEADER_Y_OFFSET  = 0.135
 DIVIDER_Y_OFFSET = 0.075
 
 TEXT_FONT_SIZE = 13
-DOT_FONT_SIZE  = 22      # middle dot size
-DOT_GAP        = 0.06    # spacing around dot (robust)
+DOT_FONT_SIZE  = 22
+DOT_GAP        = 0.06
 
 PRIMARY_OPACITY   = 1.0
 SECONDARY_OPACITY = 0.45
@@ -139,7 +139,7 @@ def get_visual_left_edge(fig, ax):
     return min(e.x0 for e in extents) / fig.bbox.width if extents else ax.get_position().x0
 
 # ============================================================
-# INLINE HEADER RENDERER (ROBUST)
+# INLINE HEADER RENDERER (FIXED)
 # ============================================================
 
 def draw_inline(fig, start_x, y, elements):
@@ -152,7 +152,8 @@ def draw_inline(fig, start_x, y, elements):
                 cursor, y, "·",
                 fontsize=DOT_FONT_SIZE,
                 color=TEXT_COLOR,
-                alpha=PRIMARY_OPACITY
+                alpha=PRIMARY_OPACITY,
+                va="center"
             )
             cursor += DOT_GAP / 2
         else:
@@ -160,7 +161,8 @@ def draw_inline(fig, start_x, y, elements):
                 cursor, y, text,
                 fontsize=TEXT_FONT_SIZE,
                 color=color,
-                alpha=opacity
+                alpha=opacity,
+                va="center"
             )
             cursor += measure(fig, text, TEXT_FONT_SIZE)
 
@@ -184,7 +186,6 @@ def draw_header(fig, ax, time_class, ratings, color):
     y_text = 1 - FIG_TOP_MARGIN + HEADER_Y_OFFSET
     y_div  = 1 - FIG_TOP_MARGIN + DIVIDER_Y_OFFSET
 
-    # LEFT CLUSTER (uses same engine as right)
     left_elements = [
         (time_class.upper(), color, PRIMARY_OPACITY),
         ("DOT", None, None),
@@ -193,7 +194,6 @@ def draw_header(fig, ax, time_class, ratings, color):
 
     draw_inline(fig, x_left, y_text, left_elements)
 
-    # RIGHT CLUSTER
     right_elements = [
         (str(game_count), color, PRIMARY_OPACITY),
         (" GAMES", TEXT_COLOR, SECONDARY_OPACITY),
@@ -211,7 +211,6 @@ def draw_header(fig, ax, time_class, ratings, color):
 
     draw_inline(fig, x_right - total_width, y_text, right_elements)
 
-    # DIVIDER
     fig.lines.append(
         plt.Line2D(
             [x_left, x_right], [y_div, y_div],
