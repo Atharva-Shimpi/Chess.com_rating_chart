@@ -6,7 +6,9 @@ name: Update Readme ascii graph and workflow with random cron interval
 
 on:
   push:
-    branches: master
+    branches:
+      - feature/svg-multichart
+      - master
     paths-ignore:
       - README.md
       - .github/workflows/rating-chart.yml
